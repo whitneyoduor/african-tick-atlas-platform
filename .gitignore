@@ -4,4 +4,3 @@ vite.log
 nul
 .env
 .env.local
-server/prisma/*.db
