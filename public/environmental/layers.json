@@ -1,0 +1,47 @@
+{
+  "T1": {
+    "label": "Jan - Apr",
+    "file": "T1.png",
+    "width": 147,
+    "height": 145,
+    "bounds": [
+      -18.4743,
+      -34.9028,
+      54.9236,
+      37.3958
+    ],
+    "vmin": 0,
+    "vmax": 20,
+    "unit": "mm/day"
+  },
+  "T2": {
+    "label": "May - Aug",
+    "file": "T2.png",
+    "width": 147,
+    "height": 145,
+    "bounds": [
+      -18.4743,
+      -34.9028,
+      54.9236,
+      37.3958
+    ],
+    "vmin": 0,
+    "vmax": 20,
+    "unit": "mm/day"
+  },
+  "T3": {
+    "label": "Sep - Dec",
+    "file": "T3.png",
+    "width": 147,
+    "height": 145,
+    "bounds": [
+      -18.4743,
+      -34.9028,
+      54.9236,
+      37.3958
+    ],
+    "vmin": 0,
+    "vmax": 20,
+    "unit": "mm/day"
+  }
+}

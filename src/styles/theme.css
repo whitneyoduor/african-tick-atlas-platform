@@ -1,0 +1,111 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Core palette */
+  --header-bg: #134E4A;
+  --page-bg: #F0F5F1;
+  --card-bg: #FFFFFF;
+  --border: #E2E5DE;
+  --border-light: #EBEDE9;
+  --text-primary: #1C1917;
+  --text-secondary: #57534E;
+  --text-muted: #A8A29E;
+  --text-on-dark: #E7E5E4;
+  --text-on-dark-muted: #A8A29E;
+
+  /* Semantic accents */
+  --accent-teal: #134E4A;
+  --accent-teal-light: #D1FAE5;
+  --accent-amber: #D97706;
+  --accent-amber-light: #FEF3C7;
+  --accent-red: #DC2626;
+  --accent-red-light: #FEE2E2;
+  --accent-blue: #475569;
+  --accent-indigo: #4F46E5;
+
+  /* Component aliases (used by inline styles across components) */
+  --primary: #134E4A;
+  --primary-light: #D1FAE5;
+  --primary-dark: #0F3B38;
+  --accent: #DC2626;
+  --accent-light: #FEE2E2;
+  --warning: #D97706;
+  --warning-light: #FEF3C7;
+  --surface-card: #FFFFFF;
+  --surface-ground: #F0F5F1;
+  --text-color: #1C1917;
+  --text-color-secondary: #57534E;
+  --chart-1: #134E4A;
+  --chart-2: #DC2626;
+  --chart-3: #D97706;
+  --chart-4: #4F46E5;
+  --chart-5: #475569;
+
+  --font-family: system-ui, -apple-system, sans-serif;
+}
+
+@theme inline {
+  --color-background: var(--page-bg);
+  --color-foreground: var(--text-primary);
+  --color-card: var(--card-bg);
+  --color-card-foreground: var(--text-primary);
+  --color-primary: var(--accent-teal);
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: var(--page-bg);
+  --color-secondary-foreground: var(--text-primary);
+  --color-muted: var(--page-bg);
+  --color-muted-foreground: var(--text-secondary);
+  --color-destructive: var(--accent-red);
+  --color-destructive-foreground: #FFFFFF;
+  --color-border: var(--border);
+  --color-ring: var(--accent-teal);
+  --color-chart-1: var(--accent-teal);
+  --color-chart-2: var(--accent-red);
+  --color-chart-3: var(--accent-amber);
+  --color-chart-4: var(--accent-indigo);
+  --color-chart-5: var(--accent-blue);
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-family);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* MapLibre popup overrides for light basemap */
+.maplibregl-popup-content {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+  padding: 10px 14px !important;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: var(--card-bg) !important;
+  box-shadow: none !important;
+}
+
+.maplibregl-popup-close-button {
+  color: var(--text-muted) !important;
+  font-size: 16px !important;
+  right: 6px !important;
+  top: 4px !important;
+}
+
+.maplibregl-popup-close-button:hover {
+  color: var(--text-primary) !important;
+}

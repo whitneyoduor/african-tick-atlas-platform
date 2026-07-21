@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./tickatlas.db"
+}
+
+model TickRecord {
+  id                      Int      @id @default(autoincrement())
+  latitude                Float?
+  longitude               Float?
+  species                 String?
+  yearOfStudy             String?
+  yearStart               Int?
+  yearEnd                 Int?
+  country                 String?
+  title                   String?
+  links                   String?
+  epidemiologicalDisease  String?
+  methodOfExtraction      String?
+  relatedHosts            String?
+  epidemiologicalIncidences String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tick_records")
+}
