@@ -1,4 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
+const USE_STATIC = !import.meta.env.VITE_API_URL && import.meta.env.PROD;
 
 export interface TickRecord {
   id: number;
@@ -57,35 +58,120 @@ interface QueryParams {
   signal?: AbortSignal;
 }
 
+let staticData: PaginatedResponse | null = null;
+let staticMeta: MetaCounts | null = null;
+
+async function loadStaticData(): Promise<PaginatedResponse> {
+  if (!staticData) {
+    const res = await fetch("/tick-data.json");
+    staticData = await res.json();
+  }
+  return staticData;
+}
+
+async function loadStaticMeta(): Promise<MetaCounts> {
+  if (!staticMeta) {
+    const res = await fetch("/tick-meta.json");
+    staticMeta = await res.json();
+  }
+  return staticMeta;
+}
+
+function filterStatic(data: PaginatedResponse, params: QueryParams): PaginatedResponse {
+  let rows = data.data;
+  if (params.species) rows = rows.filter((r) => r.species === params.species);
+  if (params.country) rows = rows.filter((r) => r.country === params.country);
+  if (params.host) rows = rows.filter((r) => r.relatedHosts === params.host);
+  if (params.disease) rows = rows.filter((r) => r.epidemiologicalDisease === params.disease);
+  if (params.yearStart) rows = rows.filter((r) => r.yearStart !== null && r.yearStart >= params.yearStart!);
+  if (params.yearEnd) rows = rows.filter((r) => r.yearEnd !== null && r.yearEnd <= params.yearEnd!);
+  if (params.search) {
+    const q = params.search.toLowerCase();
+    rows = rows.filter((r) =>
+      (r.species || "").toLowerCase().includes(q) ||
+      (r.country || "").toLowerCase().includes(q) ||
+      (r.relatedHosts || "").toLowerCase().includes(q) ||
+      (r.epidemiologicalDisease || "").toLowerCase().includes(q) ||
+      (r.title || "").toLowerCase().includes(q)
+    );
+  }
+  const limit = params.limit || 50;
+  const page = params.page || 1;
+  const start = (page - 1) * limit;
+  return {
+    data: rows.slice(start, start + limit),
+    pagination: { page, limit, total: rows.length, totalPages: Math.ceil(rows.length / limit) },
+  };
+}
+
 export async function fetchTicks(params: QueryParams = {}): Promise<PaginatedResponse> {
-  const qs = new URLSearchParams();
-  if (params.species) qs.set("species", params.species);
-  if (params.country) qs.set("country", params.country);
-  if (params.host) qs.set("host", params.host);
-  if (params.disease) qs.set("disease", params.disease);
-  if (params.yearStart) qs.set("yearStart", String(params.yearStart));
-  if (params.yearEnd) qs.set("yearEnd", String(params.yearEnd));
-  if (params.search) qs.set("search", params.search);
-  if (params.page) qs.set("page", String(params.page));
-  if (params.limit) qs.set("limit", String(params.limit));
-  const res = await fetch(`${API_BASE}/ticks?${qs}`, { signal: params.signal });
-  if (!res.ok) throw new Error("Failed to fetch tick records");
-  return res.json();
+  if (USE_STATIC) {
+    const data = await loadStaticData();
+    return filterStatic(data, params);
+  }
+
+  try {
+    const qs = new URLSearchParams();
+    if (params.species) qs.set("species", params.species);
+    if (params.country) qs.set("country", params.country);
+    if (params.host) qs.set("host", params.host);
+    if (params.disease) qs.set("disease", params.disease);
+    if (params.yearStart) qs.set("yearStart", String(params.yearStart));
+    if (params.yearEnd) qs.set("yearEnd", String(params.yearEnd));
+    if (params.search) qs.set("search", params.search);
+    if (params.page) qs.set("page", String(params.page));
+    if (params.limit) qs.set("limit", String(params.limit));
+    const res = await fetch(`${API_BASE}/ticks?${qs}`, { signal: params.signal });
+    if (!res.ok) throw new Error("API error");
+    return res.json();
+  } catch {
+    const data = await loadStaticData();
+    return filterStatic(data, params);
+  }
 }
 
 export async function fetchTickById(id: number, signal?: AbortSignal): Promise<TickRecord> {
+  if (USE_STATIC) {
+    const data = await loadStaticData();
+    const record = data.data.find((r) => r.id === id);
+    if (!record) throw new Error("Record not found");
+    return record;
+  }
   const res = await fetch(`${API_BASE}/ticks/${id}`, { signal });
   if (!res.ok) throw new Error("Failed to fetch tick record");
   return res.json();
 }
 
 export async function fetchMetaCounts(signal?: AbortSignal): Promise<MetaCounts> {
-  const res = await fetch(`${API_BASE}/ticks/meta/counts`, { signal });
-  if (!res.ok) throw new Error("Failed to fetch metadata");
-  return res.json();
+  if (USE_STATIC) return loadStaticMeta();
+
+  try {
+    const res = await fetch(`${API_BASE}/ticks/meta/counts`, { signal });
+    if (!res.ok) throw new Error("API error");
+    return res.json();
+  } catch {
+    return loadStaticMeta();
+  }
 }
 
 export async function fetchYearlyData(signal?: AbortSignal): Promise<{ data: YearlyDataPoint[] }> {
+  if (USE_STATIC) {
+    const all = await loadStaticData();
+    const yearlyCounts: Record<number, number> = {};
+    for (const r of all.data) {
+      if (r.yearStart === null) continue;
+      const start = r.yearStart;
+      const end = r.yearEnd ?? start;
+      for (let y = start; y <= end; y++) {
+        yearlyCounts[y] = (yearlyCounts[y] || 0) + 1;
+      }
+    }
+    return {
+      data: Object.entries(yearlyCounts)
+        .map(([year, count]) => ({ year: parseInt(year), count }))
+        .sort((a, b) => a.year - b.year),
+    };
+  }
   const res = await fetch(`${API_BASE}/ticks/meta/yearly`, { signal });
   if (!res.ok) throw new Error("Failed to fetch yearly data");
   return res.json();
