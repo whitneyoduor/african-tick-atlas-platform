@@ -2,7 +2,7 @@ import { useEffect, useRef, useMemo } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { type TickRecord } from "../../lib/api";
-import { isOnLand } from "../../lib/land-filter";
+import { isOnLand } from "../../../lib/land-filter";
 
 const AFRICA_BBOX = [-25, -40, 55, 40];
 

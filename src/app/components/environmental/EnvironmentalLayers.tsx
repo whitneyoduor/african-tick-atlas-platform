@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { fetchTicks, type TickRecord } from "../../lib/api";
-import { isOnLand } from "../../lib/land-filter";
+import { isOnLand } from "../../../lib/land-filter";
 
 interface LayerMeta {
   label: string;
