@@ -168,7 +168,7 @@ export function MapPage() {
     { id: "occurrence", label: "Tick Occurrence", color: "var(--accent-teal)", activeBg: "var(--accent-teal-light)", activeText: "var(--accent-teal)", activeRing: "var(--accent-teal-light)" },
     { id: "richness", label: "Species Richness", color: "var(--accent-indigo)", activeBg: "#EEF2FF", activeText: "#4338CA", activeRing: "#EEF2FF" },
     { id: "hosts", label: "Host Diversity", color: "var(--accent-amber)", activeBg: "var(--accent-amber-light)", activeText: "#B45309", activeRing: "var(--accent-amber-light)" },
-    { id: "disease", label: "Disease Risk", color: "var(--accent-red)", activeBg: "var(--accent-red-light)", activeText: "var(--accent-red)", activeRing: "var(--accent-red-light)" },
+    { id: "disease", label: "Diseases", color: "var(--accent-red)", activeBg: "var(--accent-red-light)", activeText: "var(--accent-red)", activeRing: "var(--accent-red-light)" },
     { id: "prevalence", label: "Prevalence", color: "var(--accent-blue)", activeBg: "#FDF2F8", activeText: "#BE185D", activeRing: "#FDF2F8" },
     { id: "density", label: "Density", color: "var(--accent-red)", activeBg: "#FFF1F2", activeText: "#BE123C", activeRing: "#FFF1F2" },
   ];

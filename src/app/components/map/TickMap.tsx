@@ -168,15 +168,31 @@ function applyStyle(m: maplibregl.Map, layer: Layer) {
 
     case "disease":
       m.setPaintProperty(p, "circle-radius", [
-        "case", ["all", ["!=", ["get", "di"], "None"], ["!=", ["get", "di"], ""]], 7, 3
+        "case", ["all", ["!=", ["get", "di"], "None"], ["!=", ["get", "di"], ""]], 6, 2.5
       ]);
-      m.setPaintProperty(p, "circle-color", "#DC2626");
+      m.setPaintProperty(p, "circle-color", [
+        "match", ["get", "di"],
+        "Rickettsia spp.", "#DC2626",
+        "Anaplasma spp.", "#EA580C",
+        "Ehrlichia spp.", "#D97706",
+        "CCHFV", "#7C3AED",
+        "Coxiella burnetii", "#2563EB",
+        "Crimean-Congo Haemorrhagic Fever", "#6D28D9",
+        "Babesia spp.", "#059669",
+        "Theileria spp.", "#0891B2",
+        "Ehrlichia ruminantium", "#B45309",
+        "Rickettsia africae", "#E11D48",
+        "Anaplasma marginale", "#C2410C",
+        "Anaplasma phagocytophilum", "#9333EA",
+        "Borrelia spp.", "#4F46E5",
+        "#6B7280"
+      ]);
       m.setPaintProperty(p, "circle-stroke-width", [
-        "case", ["all", ["!=", ["get", "di"], "None"], ["!=", ["get", "di"], ""]], 2.5, 1
+        "case", ["all", ["!=", ["get", "di"], "None"], ["!=", ["get", "di"], ""]], 1.5, 0.5
       ]);
       m.setPaintProperty(p, "circle-stroke-color", "#fff");
       m.setPaintProperty(p, "circle-opacity", [
-        "case", ["all", ["!=", ["get", "di"], "None"], ["!=", ["get", "di"], ""]], 0.95, 0.2
+        "case", ["all", ["!=", ["get", "di"], "None"], ["!=", ["get", "di"], ""]], 0.9, 0.15
       ]);
       break;
 
