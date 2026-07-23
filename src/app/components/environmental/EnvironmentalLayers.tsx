@@ -343,8 +343,8 @@ export function EnvironmentalLayers() {
         </div>
       </div>
 
-      <div className="relative h-1/2">
-        <div ref={containerRef} className="w-full h-full" />
+      <div className="relative flex-1 flex items-center justify-center">
+        <div ref={containerRef} className="w-3/4 h-3/4" />
 
         {cursorVal && (
           <div
