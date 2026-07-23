@@ -2,6 +2,7 @@ import { useEffect, useRef, useMemo } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { type TickRecord } from "../../lib/api";
+import { isOnLand } from "../../lib/land-filter";
 
 const AFRICA_BBOX = [-25, -40, 55, 40];
 
@@ -118,7 +119,7 @@ function buildGeoJSON(records: TickRecord[]): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
     features: records
-      .filter((r) => r.latitude && r.longitude)
+      .filter((r) => r.latitude && r.longitude && isOnLand(r.latitude, r.longitude))
       .map((r) => ({
         type: "Feature" as const,
         geometry: { type: "Point" as const, coordinates: [r.longitude!, r.latitude!] },

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { fetchTicks, type TickRecord } from "../../lib/api";
+import { isOnLand } from "../../lib/land-filter";
 
 interface LayerMeta {
   label: string;
@@ -228,7 +229,7 @@ export function EnvironmentalLayers() {
         : records;
 
       const features: GeoJSON.Feature[] = filtered
-        .filter((r) => r.latitude && r.longitude)
+        .filter((r) => r.latitude && r.longitude && isOnLand(r.latitude, r.longitude))
         .map((r) => ({
           type: "Feature",
           geometry: { type: "Point", coordinates: [r.longitude!, r.latitude!] },
