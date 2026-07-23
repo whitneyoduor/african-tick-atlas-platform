@@ -121,7 +121,7 @@ export function MapPage() {
   }, []);
 
   useEffect(() => {
-    const hasFilters = filters.species || filters.country || filters.host || filters.disease || filters.yearFrom || filters.yearTo;
+    const hasFilters = filters.species || filters.country || filters.host || filters.disease || filters.method || filters.yearFrom || filters.yearTo;
     if (!hasFilters) {
       setFilteredRecords(allRecords);
       return;
@@ -137,10 +137,14 @@ export function MapPage() {
       limit: 50000,
       signal: ctrl.signal,
     })
-      .then((r) => setFilteredRecords(r.data))
+      .then((r) => {
+        let rows = r.data;
+        if (filters.method) rows = rows.filter((rec) => rec.methodOfExtraction === filters.method);
+        setFilteredRecords(rows);
+      })
       .catch(() => {});
     return () => ctrl.abort();
-  }, [filters.species, filters.country, filters.host, filters.disease, filters.yearFrom, filters.yearTo, allRecords]);
+  }, [filters.species, filters.country, filters.host, filters.disease, filters.method, filters.yearFrom, filters.yearTo, allRecords]);
 
   const methods = useMemo(() => {
     const s = new Set<string>();
