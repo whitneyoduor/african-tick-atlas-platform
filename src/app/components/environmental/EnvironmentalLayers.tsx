@@ -313,7 +313,7 @@ export function EnvironmentalLayers() {
   }).length;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)]" style={{ fontFamily: "var(--font-family)" }}>
+    <div className="flex flex-col" style={{ fontFamily: "var(--font-family)" }}>
 
       <div className="px-5 py-3 flex items-center justify-between shrink-0" style={{ background: "var(--card-bg)", borderBottom: "1px solid var(--border)" }}>
         <div>
@@ -343,7 +343,7 @@ export function EnvironmentalLayers() {
         </div>
       </div>
 
-      <div className="relative flex-1">
+      <div className="relative h-[50vh]">
         <div ref={containerRef} className="w-full h-full" />
 
         {cursorVal && (
