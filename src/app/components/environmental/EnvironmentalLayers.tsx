@@ -102,10 +102,11 @@ export function EnvironmentalLayers() {
     const m = new maplibregl.Map({
       container: containerRef.current,
       style: "https://tiles.openfreemap.org/styles/liberty",
-      center: [18, 2],
-      zoom: 3,
+      center: [25, 0],
+      zoom: 3.5,
       minZoom: 2,
       maxZoom: 10,
+      maxBounds: [-25, -40, 55, 40] as [number, number, number, number],
     });
 
     m.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
@@ -155,33 +156,40 @@ export function EnvironmentalLayers() {
       const url = `/environmental/${layer.file}`;
       const coords = boundsToCoords(layer.bounds);
 
-      m.addSource("raster-layer", {
-        type: "image",
-        url,
-        coordinates: coords,
-      });
-
-      m.addLayer({
-        id: "raster-layer",
-        type: "raster",
-        source: "raster-layer",
-        paint: {
-          "raster-opacity": opacity / 100,
-          "raster-fade-duration": 0,
-          "raster-resampling": "nearest",
-        },
-      });
-
       const img = new Image();
+      img.crossOrigin = "anonymous";
       img.onload = () => {
         const canvas = document.createElement("canvas");
         canvas.width = layer.width;
         canvas.height = layer.height;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          pixelData.current = ctx.getImageData(0, 0, layer.width, layer.height);
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, layer.width, layer.height);
+        const imageData = ctx.getImageData(0, 0, layer.width, layer.height);
+        const d = imageData.data;
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i] >= 240 && d[i + 1] >= 240 && d[i + 2] >= 240) {
+            d[i + 3] = 0;
+          }
         }
+        ctx.putImageData(imageData, 0, 0);
+        pixelData.current = imageData;
+
+        m.addSource("raster-layer", {
+          type: "image",
+          url: canvas.toDataURL(),
+          coordinates: coords,
+        });
+
+        m.addLayer({
+          id: "raster-layer",
+          type: "raster",
+          source: "raster-layer",
+          paint: {
+            "raster-opacity": opacity / 100,
+            "raster-fade-duration": 0,
+            "raster-resampling": "nearest",
+          },
+        });
       };
       img.src = url;
     }
@@ -305,7 +313,7 @@ export function EnvironmentalLayers() {
   }).length;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-44px)]" style={{ fontFamily: "var(--font-family)" }}>
+    <div className="flex flex-col h-[calc(100vh-120px)]" style={{ fontFamily: "var(--font-family)" }}>
 
       <div className="px-5 py-3 flex items-center justify-between shrink-0" style={{ background: "var(--card-bg)", borderBottom: "1px solid var(--border)" }}>
         <div>

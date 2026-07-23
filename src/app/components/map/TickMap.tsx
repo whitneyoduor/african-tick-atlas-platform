@@ -43,6 +43,28 @@ export function TickMap({ activeLayer, records }: TickMapProps) {
       m.addSource("ticks", { type: "geojson", data });
 
       m.addLayer({
+        id: "heatmap",
+        type: "heatmap",
+        source: "ticks",
+        layout: { visibility: "none" },
+        paint: {
+          "heatmap-weight": 1,
+          "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 1, 10, 3],
+          "heatmap-color": [
+            "interpolate", ["linear"], ["heatmap-density"],
+            0, "rgba(0,0,0,0)",
+            0.2, "#fef3c7",
+            0.4, "#f59e0b",
+            0.6, "#dc2626",
+            0.8, "#7f1d1d",
+            1, "#450a0a",
+          ],
+          "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 4, 10, 25],
+          "heatmap-opacity": 0.75,
+        },
+      });
+
+      m.addLayer({
         id: "points",
         type: "circle",
         source: "ticks",
@@ -110,6 +132,12 @@ function buildGeoJSON(records: TickRecord[]): GeoJSON.FeatureCollection {
 }
 
 function applyStyle(m: maplibregl.Map, layer: Layer) {
+  const isDensity = layer === "density";
+  m.setLayoutProperty("points", "visibility", isDensity ? "none" : "visible");
+  m.setLayoutProperty("heatmap", "visibility", isDensity ? "visible" : "none");
+
+  if (isDensity) return;
+
   const p = "points";
 
   switch (layer) {
@@ -163,13 +191,6 @@ function applyStyle(m: maplibregl.Map, layer: Layer) {
       m.setPaintProperty(p, "circle-opacity", [
         "case", ["all", ["!=", ["get", "di"], "None"], ["!=", ["get", "di"], ""]], 0.9, 0.15
       ]);
-      break;
-
-    case "density":
-      m.setPaintProperty(p, "circle-radius", 10);
-      m.setPaintProperty(p, "circle-color", "#134E4A");
-      m.setPaintProperty(p, "circle-stroke-width", 0);
-      m.setPaintProperty(p, "circle-opacity", 0.08);
       break;
   }
 }
