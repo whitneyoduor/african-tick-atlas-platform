@@ -314,6 +314,16 @@ export function MapPage() {
           </div>
 
           <div>
+            <SearchableSelect
+              value={filters.disease}
+              options={meta?.diseases || []}
+              placeholder={`All diseases (${meta?.diseases.length || 0})`}
+              label="Associated diseases"
+              onChange={(v) => setFilter("disease", v)}
+            />
+          </div>
+
+          <div>
             <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--text-muted)" }}>Country</label>
             <select
               value={filters.country}
@@ -336,19 +346,6 @@ export function MapPage() {
             >
               <option value="">All hosts ({meta?.hosts.length || 0})</option>
               {meta?.hosts.map((h) => <option key={h.name} value={h.name}>{h.name} ({h.count})</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--text-muted)" }}>Disease</label>
-            <select
-              value={filters.disease}
-              onChange={(e) => setFilter("disease", e.target.value)}
-              className="w-full text-xs border rounded px-3 py-2"
-              style={{ borderColor: "var(--border)", background: "var(--card-bg)", color: "var(--text-primary)" }}
-            >
-              <option value="">All diseases ({meta?.diseases.length || 0})</option>
-              {meta?.diseases.map((d) => <option key={d.name} value={d.name}>{d.name} ({d.count})</option>)}
             </select>
           </div>
 
