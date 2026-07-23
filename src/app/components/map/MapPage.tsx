@@ -232,12 +232,18 @@ export function MapPage() {
       <div className="flex-1 relative">
         <TickMap activeLayer={activeLayer} records={filteredRecords} />
 
-        <div className="absolute top-3 left-3 flex gap-2">
+        <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
           <SearchableSelect
             value={filters.species}
             options={meta?.species || []}
             placeholder="All Species"
             onChange={(v) => setFilter("species", v)}
+          />
+          <SearchableSelect
+            value={filters.disease}
+            options={meta?.diseases || []}
+            placeholder="All Diseases"
+            onChange={(v) => setFilter("disease", v)}
           />
           <select
             value={filters.country}
