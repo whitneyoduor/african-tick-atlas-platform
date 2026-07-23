@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { TickMap } from "./TickMap";
 import { fetchMetaCounts, fetchTicks, type TickRecord, type MetaCounts } from "../../lib/api";
 
@@ -15,6 +15,85 @@ interface Filters {
 }
 
 const EMPTY_FILTERS: Filters = { species: "", country: "", host: "", disease: "", method: "", yearFrom: "", yearTo: "" };
+
+function SearchableSelect({ value, options, placeholder, label, onChange }: {
+  value: string;
+  options: { name: string; count?: number }[];
+  placeholder: string;
+  label?: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(() => {
+    if (!query) return options;
+    const q = query.toLowerCase();
+    return options.filter((o) => o.name.toLowerCase().includes(q));
+  }, [options, query]);
+
+  const handleFocus = useCallback(() => { setOpen(true); setQuery(""); }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const displayText = value || "";
+
+  return (
+    <div ref={wrapRef} className="relative">
+      {label && <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--text-muted)" }}>{label}</label>}
+      <input
+        ref={inputRef}
+        type="text"
+        value={open ? query : displayText}
+        placeholder={placeholder}
+        readOnly={!open}
+        onFocus={handleFocus}
+        onClick={handleFocus}
+        onChange={(e) => setQuery(e.target.value)}
+        className="w-full text-xs border rounded px-3 py-2"
+        style={{ borderColor: "var(--border)", background: "var(--card-bg)", color: "var(--text-primary)" }}
+      />
+      {open && (
+        <div className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded shadow-lg" style={{ background: "var(--card-bg)", border: "1px solid var(--border)" }}>
+          {value && (
+            <div
+              className="px-3 py-1.5 text-xs cursor-pointer font-medium"
+              style={{ color: "var(--text-muted)" }}
+              onMouseDown={(e) => { e.preventDefault(); onChange(""); setOpen(false); setQuery(""); }}
+            >
+              Clear selection
+            </div>
+          )}
+          {filtered.length === 0 && (
+            <div className="px-3 py-1.5 text-xs" style={{ color: "var(--text-muted)" }}>No matches</div>
+          )}
+          {filtered.map((o) => (
+            <div
+              key={o.name}
+              className="px-3 py-1.5 text-xs cursor-pointer"
+              style={{
+                background: value === o.name ? "var(--accent-teal-light)" : "transparent",
+                color: value === o.name ? "var(--accent-teal)" : "var(--text-primary)",
+              }}
+              onMouseDown={(e) => { e.preventDefault(); onChange(o.name); setOpen(false); setQuery(""); }}
+            >
+              {o.name}{o.count != null ? ` (${o.count})` : ""}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function MapPage() {
   const [activeLayer, setActiveLayer] = useState<Layer>("occurrence");
@@ -150,15 +229,12 @@ export function MapPage() {
         <TickMap activeLayer={activeLayer} records={filteredRecords} />
 
         <div className="absolute top-3 left-3 flex gap-2">
-          <select
+          <SearchableSelect
             value={filters.species}
-            onChange={(e) => setFilter("species", e.target.value)}
-            className="text-xs border rounded px-2.5 py-1.5 shadow-sm"
-            style={{ borderColor: "var(--border)", background: "var(--card-bg)", color: "var(--text-primary)" }}
-          >
-            <option value="">All Species</option>
-            {meta?.species.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}
-          </select>
+            options={meta?.species || []}
+            placeholder="All Species"
+            onChange={(v) => setFilter("species", v)}
+          />
           <select
             value={filters.country}
             onChange={(e) => setFilter("country", e.target.value)}
@@ -200,16 +276,13 @@ export function MapPage() {
         </div>
         <div className="p-4 space-y-4">
           <div>
-            <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--text-muted)" }}>Species</label>
-            <select
+            <SearchableSelect
               value={filters.species}
-              onChange={(e) => setFilter("species", e.target.value)}
-              className="w-full text-xs border rounded px-3 py-2"
-              style={{ borderColor: "var(--border)", background: "var(--card-bg)", color: "var(--text-primary)" }}
-            >
-              <option value="">All species ({meta?.species.length || 0})</option>
-              {meta?.species.map((s) => <option key={s.name} value={s.name}>{s.name} ({s.count})</option>)}
-            </select>
+              options={meta?.species || []}
+              placeholder={`All species (${meta?.species.length || 0})`}
+              label="Species"
+              onChange={(v) => setFilter("species", v)}
+            />
           </div>
 
           <div>
