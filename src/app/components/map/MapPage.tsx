@@ -168,7 +168,7 @@ export function MapPage() {
     { id: "occurrence", label: "Tick Occurrence", color: "var(--accent-teal)", activeBg: "var(--accent-teal-light)", activeText: "var(--accent-teal)", activeRing: "var(--accent-teal-light)" },
     { id: "richness", label: "Species Richness", color: "var(--accent-indigo)", activeBg: "#EEF2FF", activeText: "#4338CA", activeRing: "#EEF2FF" },
     { id: "hosts", label: "Host Diversity", color: "var(--accent-amber)", activeBg: "var(--accent-amber-light)", activeText: "#B45309", activeRing: "var(--accent-amber-light)" },
-    { id: "disease", label: "Diseases", color: "var(--accent-red)", activeBg: "var(--accent-red-light)", activeText: "var(--accent-red)", activeRing: "var(--accent-red-light)" },
+    { id: "disease", label: "Associated diseases", color: "var(--accent-red)", activeBg: "var(--accent-red-light)", activeText: "var(--accent-red)", activeRing: "var(--accent-red-light)" },
     { id: "prevalence", label: "Prevalence", color: "var(--accent-blue)", activeBg: "#FDF2F8", activeText: "#BE185D", activeRing: "#FDF2F8" },
     { id: "density", label: "Density", color: "var(--accent-red)", activeBg: "#FFF1F2", activeText: "#BE123C", activeRing: "#FFF1F2" },
   ];
@@ -262,6 +262,30 @@ export function MapPage() {
         <div className="absolute bottom-3 left-3 text-[11px] px-2.5 py-1 rounded" style={{ background: "var(--card-bg)", border: "1px solid var(--border)", color: "var(--text-muted)" }}>
           {filteredRecords.length.toLocaleString()} of {meta?.totalRecords.toLocaleString() || allRecords.length.toLocaleString()} records
         </div>
+
+        {activeLayer === "disease" && (
+          <div className="absolute bottom-3 right-3 z-10 px-3 py-2.5 rounded" style={{ background: "rgba(255,255,255,0.97)", border: "1px solid var(--border)" }}>
+            <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Associated Diseases</div>
+            <div className="flex flex-col gap-1">
+              {([
+                ["Rickettsia spp.", "#DC2626"],
+                ["Anaplasma spp.", "#EA580C"],
+                ["Ehrlichia spp.", "#D97706"],
+                ["CCHFV", "#7C3AED"],
+                ["Coxiella burnetii", "#2563EB"],
+                ["Babesia spp.", "#059669"],
+                ["Theileria spp.", "#0891B2"],
+                ["Borrelia spp.", "#4F46E5"],
+                ["Other", "#6B7280"],
+              ] as [string, string][]).map(([label, color]) => (
+                <div key={label} className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
+                  <span className="text-[10px]" style={{ color: "var(--text-secondary)" }}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Right panel - Filters */}

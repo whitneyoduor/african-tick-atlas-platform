@@ -134,8 +134,13 @@ function buildGeoJSON(records: TickRecord[]): GeoJSON.FeatureCollection {
 
 function applyStyle(m: maplibregl.Map, layer: Layer) {
   const isDensity = layer === "density";
+  const isDisease = layer === "disease";
   m.setLayoutProperty("points", "visibility", isDensity ? "none" : "visible");
   m.setLayoutProperty("heatmap", "visibility", isDensity ? "visible" : "none");
+
+  if (!isDisease) {
+    try { m.setFilter("points", null); } catch (_) {}
+  }
 
   if (isDensity) return;
 
@@ -167,9 +172,8 @@ function applyStyle(m: maplibregl.Map, layer: Layer) {
       break;
 
     case "disease":
-      m.setPaintProperty(p, "circle-radius", [
-        "case", ["all", ["!=", ["get", "di"], "None"], ["!=", ["get", "di"], ""]], 6, 2.5
-      ]);
+      m.setFilter("points", ["all", ["!=", ["get", "di"], "None"], ["!=", ["get", "di"], ""]]);
+      m.setPaintProperty(p, "circle-radius", 6);
       m.setPaintProperty(p, "circle-color", [
         "match", ["get", "di"],
         "Rickettsia spp.", "#DC2626",
@@ -187,13 +191,9 @@ function applyStyle(m: maplibregl.Map, layer: Layer) {
         "Borrelia spp.", "#4F46E5",
         "#6B7280"
       ]);
-      m.setPaintProperty(p, "circle-stroke-width", [
-        "case", ["all", ["!=", ["get", "di"], "None"], ["!=", ["get", "di"], ""]], 1.5, 0.5
-      ]);
+      m.setPaintProperty(p, "circle-stroke-width", 1.5);
       m.setPaintProperty(p, "circle-stroke-color", "#fff");
-      m.setPaintProperty(p, "circle-opacity", [
-        "case", ["all", ["!=", ["get", "di"], "None"], ["!=", ["get", "di"], ""]], 0.9, 0.15
-      ]);
+      m.setPaintProperty(p, "circle-opacity", 0.9);
       break;
 
     case "prevalence":
