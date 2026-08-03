@@ -16,6 +16,14 @@ interface Filters {
 
 const EMPTY_FILTERS: Filters = { species: "", country: "", host: "", disease: "", method: "", yearFrom: "", yearTo: "" };
 
+const KEY_SPECIES = [
+  "Rhipicephalus appendiculatus",
+  "Rhipicephalus sanguineus",
+  "Rhipicephalus microplus",
+  "Hyalomma marginatum",
+  "Hyalomma rufipes",
+];
+
 function SearchableSelect({ value, options, placeholder, label, onChange }: {
   value: string;
   options: { name: string; count?: number }[];
@@ -266,6 +274,28 @@ export function MapPage() {
               (_, i) => Number(yearRange.min) + i
             ).map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
+        </div>
+
+        <div className="absolute top-14 left-3 flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] font-medium" style={{ color: "var(--text-muted)" }}>Key species:</span>
+          {KEY_SPECIES.map((sp) => {
+            const active = filters.species === sp;
+            return (
+              <button
+                key={sp}
+                onClick={() => setFilter("species", active ? "" : sp)}
+                className="text-[10px] px-2.5 py-1 rounded-full font-medium transition-colors"
+                style={{
+                  background: active ? "var(--accent-teal)" : "var(--card-bg)",
+                  color: active ? "#FFFFFF" : "var(--text-secondary)",
+                  border: active ? "1px solid var(--accent-teal)" : "1px solid var(--border)",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
+                }}
+              >
+                {sp}
+              </button>
+            );
+          })}
         </div>
 
         {/* Result count */}
