@@ -59,6 +59,14 @@ export interface YearlyDataPoint {
   count: number;
 }
 
+export interface SpeciesAttributes {
+  disease: string;
+  host: string;
+  method: string;
+}
+
+export type SpeciesDetailMap = Record<string, SpeciesAttributes>;
+
 interface OccurrenceQuery {
   species?: string;
   country?: string;
@@ -195,6 +203,69 @@ export async function fetchEpidemiologicalMeta(signal?: AbortSignal): Promise<Ep
     return res.json();
   } catch {
     return loadStatic("/epidemiological-meta.json", { value: staticEpiMeta } as any);
+  }
+}
+
+function isBlankValue(v: string | null): boolean {
+  if (!v) return true;
+  const t = v.trim().toLowerCase();
+  return t === "" || t === "none" || t === "n/a" || t === "na" || t === "unknown";
+}
+
+export function buildSpeciesDetail(records: EpidemiologicalRecord[]): SpeciesDetailMap {
+  const agg: Record<string, { disease: Record<string, number>; host: Record<string, number>; method: Record<string, number> }> = {};
+  for (const r of records) {
+    if (!r.species) continue;
+    const key = r.species.trim().toLowerCase();
+    if (!key) continue;
+    const e = (agg[key] ||= { disease: {}, host: {}, method: {} });
+    if (!isBlankValue(r.epidemiologicalDisease)) {
+      const v = r.epidemiologicalDisease!.trim();
+      e.disease[v] = (e.disease[v] || 0) + 1;
+    }
+    if (!isBlankValue(r.relatedHosts)) {
+      const v = r.relatedHosts!.trim();
+      e.host[v] = (e.host[v] || 0) + 1;
+    }
+    if (!isBlankValue(r.methodOfExtraction)) {
+      const v = r.methodOfExtraction!.trim();
+      e.method[v] = (e.method[v] || 0) + 1;
+    }
+  }
+  const best = (m: Record<string, number>) => {
+    let top = "";
+    let topN = 0;
+    for (const [k, n] of Object.entries(m)) {
+      if (n > topN) {
+        top = k;
+        topN = n;
+      }
+    }
+    return top;
+  };
+  const map: SpeciesDetailMap = {};
+  for (const [key, e] of Object.entries(agg)) {
+    map[key] = { disease: best(e.disease), host: best(e.host), method: best(e.method) };
+  }
+  return map;
+}
+
+export async function fetchEpidemiologicalSpeciesDetail(signal?: AbortSignal): Promise<SpeciesDetailMap> {
+  if (USE_STATIC) {
+    const all = await loadStatic("/epidemiological.json", { value: staticEpi } as any);
+    staticEpi = all;
+    return buildSpeciesDetail(all.data);
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/epidemiological/meta/species-detail`, { signal });
+    if (!res.ok) throw new Error("API error");
+    const json = await res.json();
+    return json.data;
+  } catch {
+    const all = await loadStatic("/epidemiological.json", { value: staticEpi } as any);
+    staticEpi = all;
+    return buildSpeciesDetail(all.data);
   }
 }
 

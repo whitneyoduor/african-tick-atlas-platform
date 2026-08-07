@@ -155,6 +155,62 @@ epidemiologicalRouter.get("/meta/yearly", async (_req: Request, res: Response) =
   }
 });
 
+epidemiologicalRouter.get("/meta/species-detail", async (_req: Request, res: Response) => {
+  try {
+    const records = await prisma.epidemiologicalRecord.findMany({
+      where: { species: { not: null } },
+      select: { species: true, epidemiologicalDisease: true, relatedHosts: true, methodOfExtraction: true },
+    });
+
+    const isEmpty = (v: string | null) => {
+      if (!v) return true;
+      const t = v.trim().toLowerCase();
+      return t === "" || t === "none" || t === "n/a" || t === "na" || t === "unknown";
+    };
+
+    const agg: Record<string, { disease: Record<string, number>; host: Record<string, number>; method: Record<string, number> }> = {};
+    for (const r of records) {
+      if (!r.species) continue;
+      const key = r.species.trim().toLowerCase();
+      if (!key) continue;
+      const e = (agg[key] ||= { disease: {}, host: {}, method: {} });
+      if (!isEmpty(r.epidemiologicalDisease)) {
+        const v = r.epidemiologicalDisease!.trim();
+        e.disease[v] = (e.disease[v] || 0) + 1;
+      }
+      if (!isEmpty(r.relatedHosts)) {
+        const v = r.relatedHosts!.trim();
+        e.host[v] = (e.host[v] || 0) + 1;
+      }
+      if (!isEmpty(r.methodOfExtraction)) {
+        const v = r.methodOfExtraction!.trim();
+        e.method[v] = (e.method[v] || 0) + 1;
+      }
+    }
+
+    const best = (m: Record<string, number>) => {
+      let top = "";
+      let topN = 0;
+      for (const [k, n] of Object.entries(m)) {
+        if (n > topN) {
+          top = k;
+          topN = n;
+        }
+      }
+      return top;
+    };
+
+    const speciesMap: Record<string, { disease: string; host: string; method: string }> = {};
+    for (const [key, e] of Object.entries(agg)) {
+      speciesMap[key] = { disease: best(e.disease), host: best(e.host), method: best(e.method) };
+    }
+    res.json({ data: speciesMap });
+  } catch (error) {
+    console.error("Error building species-detail map:", error);
+    res.status(500).json({ error: "Failed to build species-detail map" });
+  }
+});
+
 epidemiologicalRouter.get("/:id", async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string, 10);
