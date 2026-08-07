@@ -1,20 +1,17 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { TickMap } from "./TickMap";
-import { fetchMetaCounts, fetchTicks, type TickRecord, type MetaCounts } from "../../lib/api";
+import { fetchOccurrenceMeta, fetchOccurrences, type Occurrence, type OccurrenceMeta } from "../../lib/api";
 
-type Layer = "occurrence" | "richness" | "hosts" | "disease" | "prevalence" | "density";
+type Layer = "occurrence" | "richness" | "density";
 
 interface Filters {
   species: string;
   country: string;
-  host: string;
-  disease: string;
-  method: string;
   yearFrom: string;
   yearTo: string;
 }
 
-const EMPTY_FILTERS: Filters = { species: "", country: "", host: "", disease: "", method: "", yearFrom: "", yearTo: "" };
+const EMPTY_FILTERS: Filters = { species: "", country: "", yearFrom: "", yearTo: "" };
 
 const KEY_SPECIES = [
   "Rhipicephalus appendiculatus",
@@ -107,16 +104,16 @@ export function MapPage() {
   const [activeLayer, setActiveLayer] = useState<Layer>("occurrence");
   const [geoLevel, setGeoLevel] = useState<"points" | "country" | "region">("points");
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [meta, setMeta] = useState<MetaCounts | null>(null);
-  const [allRecords, setAllRecords] = useState<TickRecord[]>([]);
-  const [filteredRecords, setFilteredRecords] = useState<TickRecord[]>([]);
+  const [meta, setMeta] = useState<OccurrenceMeta | null>(null);
+  const [allRecords, setAllRecords] = useState<Occurrence[]>([]);
+  const [filteredRecords, setFilteredRecords] = useState<Occurrence[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const ctrl = new AbortController();
     Promise.all([
-      fetchMetaCounts(ctrl.signal),
-      fetchTicks({ limit: 50000, signal: ctrl.signal }),
+      fetchOccurrenceMeta(ctrl.signal),
+      fetchOccurrences({ limit: 50000, signal: ctrl.signal }),
     ])
       .then(([m, r]) => {
         setMeta(m);
@@ -129,36 +126,24 @@ export function MapPage() {
   }, []);
 
   useEffect(() => {
-    const hasFilters = filters.species || filters.country || filters.host || filters.disease || filters.method || filters.yearFrom || filters.yearTo;
+    const hasFilters = filters.species || filters.country || filters.yearFrom || filters.yearTo;
     if (!hasFilters) {
       setFilteredRecords(allRecords);
       return;
     }
     const ctrl = new AbortController();
-    fetchTicks({
+    fetchOccurrences({
       species: filters.species || undefined,
       country: filters.country || undefined,
-      host: filters.host || undefined,
-      disease: filters.disease || undefined,
       yearStart: filters.yearFrom ? Number(filters.yearFrom) : undefined,
       yearEnd: filters.yearTo ? Number(filters.yearTo) : undefined,
       limit: 50000,
       signal: ctrl.signal,
     })
-      .then((r) => {
-        let rows = r.data;
-        if (filters.method) rows = rows.filter((rec) => rec.methodOfExtraction === filters.method);
-        setFilteredRecords(rows);
-      })
+      .then((r) => setFilteredRecords(r.data))
       .catch(() => {});
     return () => ctrl.abort();
-  }, [filters.species, filters.country, filters.host, filters.disease, filters.method, filters.yearFrom, filters.yearTo, allRecords]);
-
-  const methods = useMemo(() => {
-    const s = new Set<string>();
-    allRecords.forEach((r) => { if (r.methodOfExtraction) s.add(r.methodOfExtraction); });
-    return Array.from(s).sort();
-  }, [allRecords]);
+  }, [filters.species, filters.country, filters.yearFrom, filters.yearTo, allRecords]);
 
   const yearRange = useMemo(() => {
     if (!meta) return { min: "", max: "" };
@@ -179,9 +164,6 @@ export function MapPage() {
   const layers: { id: Layer; label: string; color: string; activeBg: string; activeText: string; activeRing: string }[] = [
     { id: "occurrence", label: "Tick Occurrence", color: "var(--accent-teal)", activeBg: "var(--accent-teal-light)", activeText: "var(--accent-teal)", activeRing: "var(--accent-teal-light)" },
     { id: "richness", label: "Species Richness", color: "var(--accent-indigo)", activeBg: "#EEF2FF", activeText: "#4338CA", activeRing: "#EEF2FF" },
-    { id: "hosts", label: "Host Diversity", color: "var(--accent-amber)", activeBg: "var(--accent-amber-light)", activeText: "#B45309", activeRing: "var(--accent-amber-light)" },
-    { id: "disease", label: "Associated diseases", color: "var(--accent-red)", activeBg: "var(--accent-red-light)", activeText: "var(--accent-red)", activeRing: "var(--accent-red-light)" },
-    { id: "prevalence", label: "Prevalence", color: "var(--accent-blue)", activeBg: "#FDF2F8", activeText: "#BE185D", activeRing: "#FDF2F8" },
     { id: "density", label: "Density", color: "var(--accent-red)", activeBg: "#FFF1F2", activeText: "#BE123C", activeRing: "#FFF1F2" },
   ];
 
@@ -247,12 +229,6 @@ export function MapPage() {
             placeholder="All Species"
             onChange={(v) => setFilter("species", v)}
           />
-          <SearchableSelect
-            value={filters.disease}
-            options={meta?.diseases || []}
-            placeholder="All Diseases"
-            onChange={(v) => setFilter("disease", v)}
-          />
           <select
             value={filters.country}
             onChange={(e) => setFilter("country", e.target.value)}
@@ -302,30 +278,6 @@ export function MapPage() {
         <div className="absolute bottom-3 left-3 text-[11px] px-2.5 py-1 rounded" style={{ background: "var(--card-bg)", border: "1px solid var(--border)", color: "var(--text-muted)" }}>
           {filteredRecords.length.toLocaleString()} of {meta?.totalRecords.toLocaleString() || allRecords.length.toLocaleString()} records
         </div>
-
-        {activeLayer === "disease" && (
-          <div className="absolute bottom-3 right-3 z-10 px-3 py-2.5 rounded" style={{ background: "rgba(255,255,255,0.97)", border: "1px solid var(--border)" }}>
-            <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Associated Diseases</div>
-            <div className="flex flex-col gap-1">
-              {([
-                ["Rickettsia spp.", "#DC2626"],
-                ["Anaplasma spp.", "#EA580C"],
-                ["Ehrlichia spp.", "#D97706"],
-                ["CCHFV", "#7C3AED"],
-                ["Coxiella burnetii", "#2563EB"],
-                ["Babesia spp.", "#059669"],
-                ["Theileria spp.", "#0891B2"],
-                ["Borrelia spp.", "#4F46E5"],
-                ["Other", "#6B7280"],
-              ] as [string, string][]).map(([label, color]) => (
-                <div key={label} className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
-                  <span className="text-[10px]" style={{ color: "var(--text-secondary)" }}>{label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Right panel - Filters */}
@@ -350,16 +302,6 @@ export function MapPage() {
           </div>
 
           <div>
-            <SearchableSelect
-              value={filters.disease}
-              options={meta?.diseases || []}
-              placeholder={`All diseases (${meta?.diseases.length || 0})`}
-              label="Associated diseases"
-              onChange={(v) => setFilter("disease", v)}
-            />
-          </div>
-
-          <div>
             <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--text-muted)" }}>Country</label>
             <select
               value={filters.country}
@@ -369,32 +311,6 @@ export function MapPage() {
             >
               <option value="">All countries ({meta?.countries.length || 0})</option>
               {meta?.countries.map((c) => <option key={c.name} value={c.name}>{c.name} ({c.count})</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--text-muted)" }}>Host</label>
-            <select
-              value={filters.host}
-              onChange={(e) => setFilter("host", e.target.value)}
-              className="w-full text-xs border rounded px-3 py-2"
-              style={{ borderColor: "var(--border)", background: "var(--card-bg)", color: "var(--text-primary)" }}
-            >
-              <option value="">All hosts ({meta?.hosts.length || 0})</option>
-              {meta?.hosts.map((h) => <option key={h.name} value={h.name}>{h.name} ({h.count})</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--text-muted)" }}>Collection Method</label>
-            <select
-              value={filters.method}
-              onChange={(e) => setFilter("method", e.target.value)}
-              className="w-full text-xs border rounded px-3 py-2"
-              style={{ borderColor: "var(--border)", background: "var(--card-bg)", color: "var(--text-primary)" }}
-            >
-              <option value="">All methods ({methods.length})</option>
-              {methods.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
           </div>
 
@@ -434,24 +350,6 @@ export function MapPage() {
                   <span className="text-[10px] px-2 py-0.5 rounded flex items-center gap-1" style={{ background: "var(--accent-teal-light)", color: "var(--accent-teal)" }}>
                     {filters.country}
                     <button onClick={() => setFilter("country", "")} className="font-bold ml-0.5">&times;</button>
-                  </span>
-                )}
-                {filters.host && (
-                  <span className="text-[10px] px-2 py-0.5 rounded flex items-center gap-1" style={{ background: "var(--accent-amber-light)", color: "var(--accent-amber)" }}>
-                    {filters.host}
-                    <button onClick={() => setFilter("host", "")} className="font-bold ml-0.5">&times;</button>
-                  </span>
-                )}
-                {filters.disease && (
-                  <span className="text-[10px] px-2 py-0.5 rounded flex items-center gap-1" style={{ background: "var(--accent-red-light)", color: "var(--accent-red)" }}>
-                    {filters.disease}
-                    <button onClick={() => setFilter("disease", "")} className="font-bold ml-0.5">&times;</button>
-                  </span>
-                )}
-                {filters.method && (
-                  <span className="text-[10px] px-2 py-0.5 rounded flex items-center gap-1" style={{ background: "#EEF2FF", color: "var(--accent-indigo)" }}>
-                    {filters.method}
-                    <button onClick={() => setFilter("method", "")} className="font-bold ml-0.5">&times;</button>
                   </span>
                 )}
                 {filters.yearFrom && (

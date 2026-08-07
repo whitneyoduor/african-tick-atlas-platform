@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { fetchTicks, exportAsCSV, exportAsGeoJSON } from "../../lib/api";
+import { fetchEpidemiological, fetchOccurrences, exportAsCSV, exportAsGeoJSON } from "../../lib/api";
 
 export function Downloads() {
   const [loading, setLoading] = useState(false);
@@ -20,12 +20,19 @@ export function Downloads() {
     abortRef.current = controller;
 
     try {
-      const res = await fetchTicks({ limit: 50000, signal: controller.signal });
-      if (controller.signal.aborted) return;
-      const records = res.data;
-      setRecordCount(records.length);
-      if (format === "csv") exportAsCSV(records);
-      else exportAsGeoJSON(records);
+      if (format === "csv") {
+        const res = await fetchEpidemiological({ limit: 50000, signal: controller.signal });
+        if (controller.signal.aborted) return;
+        const records = res.data;
+        setRecordCount(records.length);
+        exportAsCSV(records);
+      } else {
+        const res = await fetchOccurrences({ limit: 50000, signal: controller.signal });
+        if (controller.signal.aborted) return;
+        const records = res.data;
+        setRecordCount(records.length);
+        exportAsGeoJSON(records);
+      }
       setSuccess(true);
     } catch (e: any) {
       if (e.name === "AbortError") return;
@@ -71,7 +78,7 @@ export function Downloads() {
                 >
                   <div className="font-semibold">{f.toUpperCase()}</div>
                   <div className="text-[10px] mt-0.5" style={{ color: "var(--text-muted)" }}>
-                    {f === "csv" ? "Tabular data" : "Spatial points"}
+                    {f === "csv" ? "Epidemiological records" : "Occurrence points"}
                   </div>
                 </button>
               ))}
@@ -126,16 +133,20 @@ export function Downloads() {
         <div className="space-y-4">
           <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", background: "var(--card-bg)" }}>
             <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--text-primary)" }}>Data Dictionary</h3>
+            <p className="text-[11px] mb-2" style={{ color: "var(--text-muted)" }}>
+              <strong style={{ color: "var(--text-primary)" }}>CSV</strong> — epidemiological records: disease, hosts, method, incidence.
+            </p>
             <div className="space-y-1.5">
               {[
                 { field: "species", desc: "Tick species name" },
-                { field: "country", desc: "Country of collection" },
-                { field: "latitude", desc: "Decimal latitude" },
-                { field: "longitude", desc: "Decimal longitude" },
                 { field: "yearOfStudy", desc: "Year or date range" },
-                { field: "relatedHosts", desc: "Host species" },
+                { field: "country", desc: "Country of collection" },
                 { field: "epidemiologicalDisease", desc: "Associated disease" },
+                { field: "relatedHosts", desc: "Host species" },
                 { field: "methodOfExtraction", desc: "Collection method" },
+                { field: "epidemiologicalIncidences", desc: "Incidence value" },
+                { field: "title", desc: "Source publication" },
+                { field: "links", desc: "Source URL" },
               ].map((f) => (
                 <div key={f.field} className="flex items-center gap-2.5 py-1">
                   <code className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--accent-teal-light)", color: "var(--accent-teal)", minWidth: 100, fontFamily: "monospace" }}>{f.field}</code>
@@ -143,6 +154,9 @@ export function Downloads() {
                 </div>
               ))}
             </div>
+            <p className="text-[11px] mt-3" style={{ color: "var(--text-muted)" }}>
+              <strong style={{ color: "var(--text-primary)" }}>GeoJSON</strong> — tick occurrence points with species, country, and year properties (GBIF-derived).
+            </p>
           </div>
 
           <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", background: "var(--card-bg)" }}>

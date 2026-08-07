@@ -1,23 +1,23 @@
 import { useEffect, useRef, useMemo } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { type TickRecord } from "../../lib/api";
+import { type Occurrence } from "../../lib/api";
 import { isOnLand } from "../../../lib/land-filter";
 
 const AFRICA_BBOX = [-25, -40, 55, 40];
 
-type Layer = "occurrence" | "richness" | "hosts" | "disease" | "prevalence" | "density";
+type Layer = "occurrence" | "richness" | "density";
 
 interface TickMapProps {
   activeLayer: Layer;
-  records: TickRecord[];
+  records: Occurrence[];
 }
 
 export function TickMap({ activeLayer, records }: TickMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const mapObj = useRef<maplibregl.Map | null>(null);
   const ready = useRef(false);
-  const recordsRef = useRef<TickRecord[]>(records);
+  const recordsRef = useRef<Occurrence[]>(records);
   const layerRef = useRef<Layer>(activeLayer);
 
   recordsRef.current = records;
@@ -70,10 +70,10 @@ export function TickMap({ activeLayer, records }: TickMapProps) {
         type: "circle",
         source: "ticks",
         paint: {
-          "circle-radius": 5,
+          "circle-radius": 4,
           "circle-color": "#134E4A",
-          "circle-opacity": 0.9,
-          "circle-stroke-width": 2.5,
+          "circle-opacity": 0.85,
+          "circle-stroke-width": 1.5,
           "circle-stroke-color": "#fff",
         },
       });
@@ -85,8 +85,8 @@ export function TickMap({ activeLayer, records }: TickMapProps) {
             .setLngLat(e.lngLat)
             .setHTML(`<div style="font-family:system-ui;font-size:12px;color:#1C1917;line-height:1.6">
               <b style="color:#134E4A">${p.sp === "None" ? "—" : p.sp}</b><br>
-              <span style="color:#78716C">Host:</span> ${p.ho === "None" ? "—" : p.ho}<br>
-              <span style="color:#78716C">Disease:</span> ${p.di === "None" ? "—" : p.di}
+              <span style="color:#78716C">Country:</span> ${p.co === "None" ? "—" : p.co}<br>
+              <span style="color:#78716C">Year:</span> ${p.yr === "None" ? "—" : p.yr}
             </div>`)
             .addTo(m);
         }
@@ -115,7 +115,7 @@ export function TickMap({ activeLayer, records }: TickMapProps) {
   return <div ref={container} className="w-full h-full" />;
 }
 
-function buildGeoJSON(records: TickRecord[]): GeoJSON.FeatureCollection {
+function buildGeoJSON(records: Occurrence[]): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
     features: records
@@ -125,8 +125,8 @@ function buildGeoJSON(records: TickRecord[]): GeoJSON.FeatureCollection {
         geometry: { type: "Point" as const, coordinates: [r.longitude!, r.latitude!] },
         properties: {
           sp: r.species || "Unknown",
-          ho: r.relatedHosts || "Unknown",
-          di: r.epidemiologicalDisease || "None",
+          co: r.country || "Unknown",
+          yr: r.year != null ? String(r.year) : "Unknown",
         },
       })),
   };
@@ -134,80 +134,24 @@ function buildGeoJSON(records: TickRecord[]): GeoJSON.FeatureCollection {
 
 function applyStyle(m: maplibregl.Map, layer: Layer) {
   const isDensity = layer === "density";
-  const isDisease = layer === "disease";
   m.setLayoutProperty("points", "visibility", isDensity ? "none" : "visible");
   m.setLayoutProperty("heatmap", "visibility", isDensity ? "visible" : "none");
-
-  if (!isDisease) {
-    try { m.setFilter("points", null); } catch (_) {}
-  }
 
   if (isDensity) return;
 
   const p = "points";
 
-  switch (layer) {
-    case "occurrence":
-      m.setPaintProperty(p, "circle-radius", 4);
-      m.setPaintProperty(p, "circle-color", "#134E4A");
-      m.setPaintProperty(p, "circle-stroke-width", 1.5);
-      m.setPaintProperty(p, "circle-stroke-color", "#fff");
-      m.setPaintProperty(p, "circle-opacity", 0.85);
-      break;
-
-    case "richness":
-      m.setPaintProperty(p, "circle-radius", 5);
-      m.setPaintProperty(p, "circle-color", "#4338CA");
-      m.setPaintProperty(p, "circle-stroke-width", 2);
-      m.setPaintProperty(p, "circle-stroke-color", "#fff");
-      m.setPaintProperty(p, "circle-opacity", 0.9);
-      break;
-
-    case "hosts":
-      m.setPaintProperty(p, "circle-radius", 5);
-      m.setPaintProperty(p, "circle-color", "#D97706");
-      m.setPaintProperty(p, "circle-stroke-width", 2);
-      m.setPaintProperty(p, "circle-stroke-color", "#fff");
-      m.setPaintProperty(p, "circle-opacity", 0.9);
-      break;
-
-    case "disease":
-      m.setFilter("points", ["all", ["!=", ["get", "di"], "None"], ["!=", ["get", "di"], ""]]);
-      m.setPaintProperty(p, "circle-radius", 6);
-      m.setPaintProperty(p, "circle-color", [
-        "match", ["get", "di"],
-        "Rickettsia spp.", "#DC2626",
-        "Anaplasma spp.", "#EA580C",
-        "Ehrlichia spp.", "#D97706",
-        "CCHFV", "#7C3AED",
-        "Coxiella burnetii", "#2563EB",
-        "Crimean-Congo Haemorrhagic Fever", "#6D28D9",
-        "Babesia spp.", "#059669",
-        "Theileria spp.", "#0891B2",
-        "Ehrlichia ruminantium", "#B45309",
-        "Rickettsia africae", "#E11D48",
-        "Anaplasma marginale", "#C2410C",
-        "Anaplasma phagocytophilum", "#9333EA",
-        "Borrelia spp.", "#4F46E5",
-        "#6B7280"
-      ]);
-      m.setPaintProperty(p, "circle-stroke-width", 1.5);
-      m.setPaintProperty(p, "circle-stroke-color", "#fff");
-      m.setPaintProperty(p, "circle-opacity", 0.9);
-      break;
-
-    case "prevalence":
-      m.setPaintProperty(p, "circle-radius", [
-        "case", ["all", ["!=", ["get", "di"], "None"], ["!=", ["get", "di"], ""]], 7, 2
-      ]);
-      m.setPaintProperty(p, "circle-color", "#7C3AED");
-      m.setPaintProperty(p, "circle-stroke-width", [
-        "case", ["all", ["!=", ["get", "di"], "None"], ["!=", ["get", "di"], ""]], 2, 0.5
-      ]);
-      m.setPaintProperty(p, "circle-stroke-color", "#fff");
-      m.setPaintProperty(p, "circle-opacity", [
-        "case", ["all", ["!=", ["get", "di"], "None"], ["!=", ["get", "di"], ""]], 0.9, 0.15
-      ]);
-      break;
+  if (layer === "richness") {
+    m.setPaintProperty(p, "circle-radius", 5);
+    m.setPaintProperty(p, "circle-color", "#4338CA");
+    m.setPaintProperty(p, "circle-stroke-width", 2);
+    m.setPaintProperty(p, "circle-stroke-color", "#fff");
+    m.setPaintProperty(p, "circle-opacity", 0.9);
+  } else {
+    m.setPaintProperty(p, "circle-radius", 4);
+    m.setPaintProperty(p, "circle-color", "#134E4A");
+    m.setPaintProperty(p, "circle-stroke-width", 1.5);
+    m.setPaintProperty(p, "circle-stroke-color", "#fff");
+    m.setPaintProperty(p, "circle-opacity", 0.85);
   }
 }

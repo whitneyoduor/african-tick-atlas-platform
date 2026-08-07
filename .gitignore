@@ -1,6 +1,10 @@
 node_modules/
 dist/
 vite.log
+vite-start.log
+*.log
 nul
 .env
 .env.local
+server/data/
+server/prisma/*.db

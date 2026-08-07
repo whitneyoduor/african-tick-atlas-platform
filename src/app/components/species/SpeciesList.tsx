@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
-import { fetchTicks, fetchMetaCounts, type TickRecord, type MetaCounts } from "../../lib/api";
+import { fetchEpidemiological, fetchEpidemiologicalMeta, type EpidemiologicalRecord, type EpidemiologicalMeta } from "../../lib/api";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export function SpeciesList() {
   const [searchParams] = useSearchParams();
-  const [meta, setMeta] = useState<MetaCounts | null>(null);
-  const [records, setRecords] = useState<TickRecord[]>([]);
+  const [meta, setMeta] = useState<EpidemiologicalMeta | null>(null);
+  const [records, setRecords] = useState<EpidemiologicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState("");
 
   useEffect(() => {
     Promise.all([
-      fetchMetaCounts().catch(() => null),
-      fetchTicks({ limit: 50000 }).catch(() => ({ data: [], pagination: { page: 1, limit: 0, total: 0, totalPages: 0 } })),
+      fetchEpidemiologicalMeta().catch(() => null),
+      fetchEpidemiological({ limit: 50000 }).catch(() => ({ data: [], pagination: { page: 1, limit: 0, total: 0, totalPages: 0 } })),
     ]).then(([m, r]) => {
       setMeta(m);
       setRecords(r.data);

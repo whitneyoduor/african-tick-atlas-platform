@@ -7,24 +7,37 @@ datasource db {
   url      = "file:./tickatlas.db"
 }
 
-model TickRecord {
-  id                      Int      @id @default(autoincrement())
-  latitude                Float?
-  longitude               Float?
-  species                 String?
-  yearOfStudy             String?
-  yearStart               Int?
-  yearEnd                 Int?
-  country                 String?
-  title                   String?
-  links                   String?
-  epidemiologicalDisease  String?
-  methodOfExtraction      String?
-  relatedHosts            String?
+model Occurrence {
+  id        Int     @id @default(autoincrement())
+  gbifId    String? @unique
+  species   String?
+  latitude  Float?
+  longitude Float?
+  country   String?
+  year      Int?
+  citation  String?
+
+  @@index([species])
+  @@index([country])
+  @@map("occurrences")
+}
+
+model EpidemiologicalRecord {
+  id                        Int      @id @default(autoincrement())
+  species                   String?
+  yearOfStudy               String?
+  yearStart                 Int?
+  yearEnd                   Int?
+  country                   String?
+  title                     String?
+  links                     String?
+  epidemiologicalDisease    String?
+  methodOfExtraction        String?
+  relatedHosts              String?
   epidemiologicalIncidences String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("tick_records")
+  @@index([species])
+  @@index([country])
+  @@index([epidemiologicalDisease])
+  @@map("epidemiological_records")
 }

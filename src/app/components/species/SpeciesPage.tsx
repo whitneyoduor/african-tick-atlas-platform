@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router";
-import { fetchTicks, type TickRecord } from "../../lib/api";
+import { fetchEpidemiological, type EpidemiologicalRecord } from "../../lib/api";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export function SpeciesPage() {
   const { name } = useParams<{ name: string }>();
   const navigate = useNavigate();
   const decoded = decodeURIComponent(name || "");
-  const [records, setRecords] = useState<TickRecord[]>([]);
+  const [records, setRecords] = useState<EpidemiologicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!decoded) return;
-    fetchTicks({ species: decoded, limit: 50000 })
+    fetchEpidemiological({ species: decoded, limit: 50000 })
       .then((res) => { setRecords(res.data); setLoading(false); })
       .catch(() => { setLoading(false); });
   }, [decoded]);

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchTicks, type TickRecord } from "../../lib/api";
+import { fetchEpidemiological, type EpidemiologicalRecord } from "../../lib/api";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Brush } from "recharts";
 
 function extractYear(raw: string | null): number | null {
@@ -19,7 +19,7 @@ const METRICS = [
 type MetricKey = (typeof METRICS)[number]["key"];
 
 export function Trends() {
-  const [records, setRecords] = useState<TickRecord[]>([]);
+  const [records, setRecords] = useState<EpidemiologicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState<MetricKey>("records");
   const [speciesFilter, setSpeciesFilter] = useState("all");
@@ -27,7 +27,7 @@ export function Trends() {
   const [brushRange, setBrushRange] = useState<[number, number]>([1930, 2025]);
 
   useEffect(() => {
-    fetchTicks({ limit: 50000 })
+    fetchEpidemiological({ limit: 50000 })
       .then((res) => { setRecords(res.data); setLoading(false); })
       .catch(() => { setLoading(false); });
   }, []);

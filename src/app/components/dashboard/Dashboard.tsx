@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
-import { fetchMetaCounts, type MetaCounts } from "../../lib/api";
+import { fetchEpidemiologicalMeta, type EpidemiologicalMeta } from "../../lib/api";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router";
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const [meta, setMeta] = useState<MetaCounts | null>(null);
+  const [meta, setMeta] = useState<EpidemiologicalMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     const ctrl = new AbortController();
-    fetchMetaCounts(ctrl.signal)
+    fetchEpidemiologicalMeta(ctrl.signal)
       .then((d) => { setMeta(d); setLoading(false); })
       .catch(() => { setError(true); setLoading(false); });
     return () => ctrl.abort();

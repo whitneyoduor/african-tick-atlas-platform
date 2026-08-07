@@ -4,9 +4,13 @@ export function ApiExplorer() {
   const [copied, setCopied] = useState<string | null>(null);
 
   const endpoints = [
-    { method: "GET", path: "/api/ticks", desc: "List all tick records with pagination", params: "page, limit, species, country, host, disease, search" },
-    { method: "GET", path: "/api/ticks/:id", desc: "Get a single tick record by ID", params: "—" },
-    { method: "GET", path: "/api/ticks/meta/counts", desc: "Get aggregated metadata counts", params: "—" },
+    { method: "GET", path: "/api/occurrences", desc: "List tick occurrence records (GBIF points) with pagination", params: "page, limit, species, country, yearStart, yearEnd, search" },
+    { method: "GET", path: "/api/occurrences/:id", desc: "Get a single occurrence record by ID", params: "—" },
+    { method: "GET", path: "/api/occurrences/meta/counts", desc: "Get aggregated occurrence counts (species, countries, year range)", params: "—" },
+    { method: "GET", path: "/api/epidemiological", desc: "List epidemiological records (disease, hosts, method) with pagination", params: "page, limit, species, country, host, disease, yearStart, yearEnd, search" },
+    { method: "GET", path: "/api/epidemiological/:id", desc: "Get a single epidemiological record by ID", params: "—" },
+    { method: "GET", path: "/api/epidemiological/meta/counts", desc: "Get aggregated epidemiological counts (species, hosts, diseases, incidence)", params: "—" },
+    { method: "GET", path: "/api/epidemiological/meta/yearly", desc: "Get records per year over time", params: "—" },
   ];
 
   const copyToClipboard = async (text: string, key: string) => {
@@ -89,9 +93,11 @@ export function ApiExplorer() {
                 { param: "limit", type: "number", desc: "Records per page (default: 50, max: 50000)" },
                 { param: "species", type: "string", desc: "Filter by tick species name" },
                 { param: "country", type: "string", desc: "Filter by country name" },
-                { param: "host", type: "string", desc: "Filter by host species" },
-                { param: "disease", type: "string", desc: "Filter by disease/pathogen" },
-                { param: "search", type: "string", desc: "Full-text search across all fields" },
+                { param: "host", type: "string", desc: "Filter by host species (epidemiological only)" },
+                { param: "disease", type: "string", desc: "Filter by disease/pathogen (epidemiological only)" },
+                { param: "yearStart", type: "number", desc: "Earliest year (occurrences filter by year; epidemiological by yearStart)" },
+                { param: "yearEnd", type: "number", desc: "Latest year (occurrences filter by year; epidemiological by yearEnd)" },
+                { param: "search", type: "string", desc: "Full-text search across available fields" },
               ].map((p) => (
                 <tr key={p.param} className="border-b" style={{ borderColor: "var(--border)" }}>
                   <td className="py-2.5 pr-4 font-mono text-xs" style={{ color: "var(--text-primary)" }}>{p.param}</td>

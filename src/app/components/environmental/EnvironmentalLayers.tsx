@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { fetchTicks, type TickRecord } from "../../lib/api";
+import { fetchOccurrences, type Occurrence } from "../../lib/api";
 import { isOnLand } from "../../../lib/land-filter";
 
 interface LayerMeta {
@@ -78,7 +78,7 @@ export function EnvironmentalLayers() {
   const [showTicks, setShowTicks] = useState(false);
   const [rSangOnly, setRSangOnly] = useState(true);
   const [layerMeta, setLayerMeta] = useState<Record<string, LayerMeta> | null>(null);
-  const [records, setRecords] = useState<TickRecord[]>([]);
+  const [records, setRecords] = useState<Occurrence[]>([]);
   const [cursorVal, setCursorVal] = useState<{ x: number; y: number; value: string } | null>(null);
 
   const metaRef = useRef<Record<string, LayerMeta> | null>(null);
@@ -89,7 +89,7 @@ export function EnvironmentalLayers() {
   useEffect(() => {
     Promise.all([
       fetch("/environmental/layers.json").then((r) => r.json()).catch(() => null),
-      fetchTicks({ limit: 50000 }).catch(() => ({ data: [] })),
+      fetchOccurrences({ limit: 50000 }).catch(() => ({ data: [] })),
     ]).then(([meta, res]) => {
       setLayerMeta(meta);
       setRecords(res.data);
@@ -235,8 +235,7 @@ export function EnvironmentalLayers() {
           geometry: { type: "Point", coordinates: [r.longitude!, r.latitude!] },
           properties: {
             sp: r.species || "Unknown",
-            ho: r.relatedHosts || "Unknown",
-            di: r.epidemiologicalDisease || "None",
+            yr: r.year != null ? String(r.year) : "Unknown",
             co: r.country || "Unknown",
           },
         }));
@@ -268,8 +267,7 @@ export function EnvironmentalLayers() {
           .setHTML(`<div style="font-family:system-ui;font-size:11px;color:#1C1917;line-height:1.7">
             <div style="font-weight:600;color:#134E4A;margin-bottom:2px">${p.sp === "None" ? "—" : p.sp}</div>
             <div><span style="color:#78716C">Country:</span> ${p.co === "None" ? "—" : p.co}</div>
-            <div><span style="color:#78716C">Host:</span> ${p.ho === "None" ? "—" : p.ho}</div>
-            <div><span style="color:#78716C">Disease:</span> ${p.di === "None" ? "—" : p.di}</div>
+            <div><span style="color:#78716C">Year:</span> ${p.yr === "None" ? "—" : p.yr}</div>
           </div>`)
           .addTo(m);
       };
