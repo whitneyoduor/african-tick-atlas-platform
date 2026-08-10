@@ -103,7 +103,7 @@ export function Trends() {
         yr.countries.forEach((c) => countrySet.add(c));
       }
     });
-    return { totalRecords, species: speciesSet.size, hosts: hostSet.size, diseases: diseaseSet.size, countries: countrySet.size };
+    return { records: totalRecords, species: speciesSet.size, hosts: hostSet.size, diseases: diseaseSet.size, countries: countrySet.size };
   }, [brushedData, yearlyMap]);
 
   const minYear = yearlyData.length > 0 ? parseInt(yearlyData[0].year) : 1930;
@@ -132,7 +132,7 @@ export function Trends() {
       <div className="mb-5">
         <h1 className="text-lg font-semibold" style={{ color: "#1C1917" }}>Trends</h1>
         <p className="text-[12px] mt-0.5" style={{ color: "#57534E" }}>
-          {stats.totalRecords.toLocaleString()} records &middot; {stats.species} species &middot; {stats.countries} countries &middot; {brushRange[0]}&ndash;{brushRange[1]}
+          {stats.records.toLocaleString()} records &middot; {stats.species} species &middot; {stats.countries} countries &middot; {brushRange[0]}&ndash;{brushRange[1]}
         </p>
       </div>
 
