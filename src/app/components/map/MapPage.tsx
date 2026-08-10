@@ -10,6 +10,7 @@ import {
   type EpidemiologicalMeta,
   type SpeciesDetailMap,
 } from "../../lib/api";
+import { KEY_SPECIES, prioritizeSpecies } from "../../lib/species";
 
 type Layer = "occurrence" | "richness" | "hosts" | "disease" | "prevalence" | "density";
 
@@ -24,14 +25,6 @@ interface Filters {
 }
 
 const EMPTY_FILTERS: Filters = { species: "", country: "", host: "", disease: "", method: "", yearFrom: "", yearTo: "" };
-
-const KEY_SPECIES = [
-  "Rhipicephalus appendiculatus",
-  "Rhipicephalus sanguineus",
-  "Rhipicephalus microplus",
-  "Hyalomma marginatum",
-  "Hyalomma rufipes",
-];
 
 function SearchableSelect({ value, options, placeholder, label, onChange }: {
   value: string;
@@ -174,6 +167,8 @@ export function MapPage() {
     [epiMeta]
   );
 
+  const speciesOptions = useMemo(() => prioritizeSpecies(meta?.species || []), [meta]);
+
   const yearRange = useMemo(() => {
     if (!meta) return { min: "", max: "" };
     return {
@@ -238,7 +233,7 @@ export function MapPage() {
         <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
           <SearchableSelect
             value={filters.species}
-            options={meta?.species || []}
+            options={speciesOptions}
             placeholder="All Species"
             onChange={(v) => setFilter("species", v)}
           />
@@ -342,8 +337,8 @@ export function MapPage() {
           <div>
             <SearchableSelect
               value={filters.species}
-              options={meta?.species || []}
-              placeholder={`All species (${meta?.species.length || 0})`}
+              options={speciesOptions}
+              placeholder={`All species (${speciesOptions.length})`}
               label="Species"
               onChange={(v) => setFilter("species", v)}
             />

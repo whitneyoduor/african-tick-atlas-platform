@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router";
 import { fetchEpidemiological, fetchEpidemiologicalMeta, type EpidemiologicalRecord, type EpidemiologicalMeta } from "../../lib/api";
+import { prioritizeSpecies } from "../../lib/species";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export function SpeciesList() {
@@ -46,7 +47,10 @@ export function SpeciesList() {
     return () => { active = false; };
   }, [selected]);
 
-  const species = useMemo(() => (meta?.species || []).filter((s) => s && s.name), [meta]);
+  const species = useMemo(
+    () => prioritizeSpecies((meta?.species || []).filter((s) => s && s.name)),
+    [meta]
+  );
 
   const overview = useMemo(() => {
     if (!meta) return null;
@@ -148,7 +152,7 @@ export function SpeciesList() {
 
           <div style={{ background: "#FFFFFF", border: "1px solid #E2E5DE" }}>
             <div className="px-5 py-3 border-b" style={{ borderColor: "#E2E5DE" }}>
-              <h3 className="text-sm font-semibold" style={{ color: "#1C1917" }}>Top 15 Species by Record Count</h3>
+              <h3 className="text-sm font-semibold" style={{ color: "#1C1917" }}>Top Species by Record Count</h3>
             </div>
             <div className="p-3">
               <ResponsiveContainer width="100%" height={480}>
