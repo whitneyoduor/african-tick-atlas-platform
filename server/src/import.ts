@@ -144,7 +144,7 @@ async function writeStaticFiles() {
   if (!fs.existsSync(PUBLIC_DIR)) fs.mkdirSync(PUBLIC_DIR, { recursive: true });
 
   const occ = await prisma.occurrence.findMany({
-    select: { id: true, species: true, latitude: true, longitude: true, country: true, year: true },
+    select: { id: true, gbifId: true, species: true, latitude: true, longitude: true, country: true, year: true, citation: true },
   });
   const epi = await prisma.epidemiologicalRecord.findMany();
 
@@ -189,7 +189,7 @@ async function writeStaticFiles() {
     species: groupBy(epi, "species"),
     countries: groupBy(epi, "country"),
     hosts: groupBy(epi, "relatedHosts"),
-    diseases: groupBy(epi, "epidemiologicalDisease", false),
+    diseases: groupBy(epi, "epidemiologicalDisease"),
   };
 
   fs.writeFileSync(path.join(PUBLIC_DIR, "occurrences.json"), JSON.stringify(occData));
@@ -205,6 +205,13 @@ async function writeStaticFiles() {
 async function main() {
   const occurrenceFile = arg("--occurrences", path.join(SERVER_ROOT, "data", "tick_occurrence_simple.xlsx"));
   const epiFile = arg("--epidemiological", path.join(SERVER_ROOT, "data", "ticks_epidemiological_data.xlsx"));
+
+  if (process.argv.includes("--static-only")) {
+    console.log("Regenerating static files from database...");
+    await writeStaticFiles();
+    console.log("Done.");
+    return;
+  }
 
   if (!fs.existsSync(occurrenceFile) || !fs.existsSync(epiFile)) {
     console.error("Input files not found. Expected:", occurrenceFile, epiFile);

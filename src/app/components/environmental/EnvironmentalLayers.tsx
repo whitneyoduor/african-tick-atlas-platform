@@ -28,7 +28,7 @@ const RASTER_CLASSES = [
   { min: 5, max: 8, color: "#FD8D3C", label: "5 – 8" },
   { min: 8, max: 12, color: "#F03B20", label: "8 – 12" },
   { min: 12, max: 15, color: "#BD0026", label: "12 – 15" },
-  { min: 15, max: 25, color: "#800026", label: "15 – 20" },
+  { min: 15, max: 20, color: "#800026", label: "15 – 20" },
 ];
 
 const COLOR_STOPS = [
@@ -89,7 +89,7 @@ export function EnvironmentalLayers() {
   useEffect(() => {
     Promise.all([
       fetch("/environmental/layers.json").then((r) => r.json()).catch(() => null),
-      fetchOccurrences({ limit: 50000 }).catch(() => ({ data: [] })),
+      fetchOccurrences({ limit: 200000 }).catch(() => ({ data: [] })),
     ]).then(([meta, res]) => {
       setLayerMeta(meta);
       setRecords(res.data);
@@ -127,7 +127,7 @@ export function EnvironmentalLayers() {
         const idx = (row * w + col) * 4;
         if (imgData.data[idx + 3] > 0) {
           const v = colorToValue(imgData.data[idx], imgData.data[idx + 1], imgData.data[idx + 2], vmin, vmax);
-          const cls = RASTER_CLASSES.find((c) => v >= c.min && v < c.max);
+          const cls = RASTER_CLASSES.find((c) => v >= c.min && v <= c.max);
           setCursorVal({ x: e.point.x, y: e.point.y, value: cls ? `${cls.label} ${layer.unit}` : `${v.toFixed(1)} ${layer.unit}` });
           return;
         }
@@ -229,7 +229,7 @@ export function EnvironmentalLayers() {
         : records;
 
       const features: GeoJSON.Feature[] = filtered
-        .filter((r) => r.latitude && r.longitude && isOnLand(r.latitude, r.longitude))
+        .filter((r) => r.latitude != null && r.longitude != null && isOnLand(r.latitude, r.longitude))
         .map((r) => ({
           type: "Feature",
           geometry: { type: "Point", coordinates: [r.longitude!, r.latitude!] },

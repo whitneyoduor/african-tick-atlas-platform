@@ -6,16 +6,21 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 export function DiseasePage() {
   const { name } = useParams<{ name: string }>();
   const navigate = useNavigate();
-  const decoded = decodeURIComponent(name || "");
+  const disease = name || "";
   const [records, setRecords] = useState<EpidemiologicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!decoded) return;
-    fetchEpidemiological({ disease: decoded, limit: 50000 })
-      .then((res) => { setRecords(res.data); setLoading(false); })
-      .catch(() => { setLoading(false); });
-  }, [decoded]);
+    if (!disease) {
+      setLoading(false);
+      return;
+    }
+    let active = true;
+    fetchEpidemiological({ disease, limit: 50000 })
+      .then((res) => { if (active) { setRecords(res.data); setLoading(false); } })
+      .catch(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [disease]);
 
   const data = useMemo(() => {
     const species: Record<string, number> = {};
@@ -44,11 +49,25 @@ export function DiseasePage() {
     </div>
   );
 
+  if (!disease || records.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-6 py-6" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
+        <button onClick={() => navigate("/diseases")} className="text-sm mb-4 hover:underline" style={{ color: "#134E4A" }}>&larr; Back to Diseases</button>
+        <h1 className="text-2xl font-semibold" style={{ color: "#1C1917" }}>{disease || "Disease"}</h1>
+        <div className="mt-4 px-5 py-8 text-center" style={{ background: "#FFFFFF", border: "1px solid #E2E5DE" }}>
+          <p className="text-sm" style={{ color: "#57534E" }}>
+            No records found for this disease. It may have been renamed or merged.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-6" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div className="mb-6">
         <button onClick={() => navigate("/diseases")} className="text-sm mb-1 hover:underline" style={{ color: "#134E4A" }}>&larr; Back to Diseases</button>
-        <h1 className="text-2xl font-semibold" style={{ color: "#1C1917" }}>{decoded}</h1>
+        <h1 className="text-2xl font-semibold" style={{ color: "#1C1917" }}>{disease}</h1>
         <p className="text-sm mt-1" style={{ color: "#57534E" }}>
           {records.length.toLocaleString()} records &middot; {data.countryCount} countries &middot; {data.speciesCount} tick vectors
         </p>

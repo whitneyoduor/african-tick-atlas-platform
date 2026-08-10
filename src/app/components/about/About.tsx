@@ -1,4 +1,34 @@
+import { useEffect, useState } from "react";
+import { fetchEpidemiologicalMeta, fetchOccurrenceMeta, type EpidemiologicalMeta, type OccurrenceMeta } from "../../lib/api";
+
+const REPO_URL = "https://github.com/whitneyoduor/african-tick-atlas-platform";
+
 export function About() {
+  const [occMeta, setOccMeta] = useState<OccurrenceMeta | null>(null);
+  const [epiMeta, setEpiMeta] = useState<EpidemiologicalMeta | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      fetchOccurrenceMeta().catch(() => null),
+      fetchEpidemiologicalMeta().catch(() => null),
+    ]).then(([o, e]) => {
+      if (!active) return;
+      setOccMeta(o);
+      setEpiMeta(e);
+    });
+    return () => { active = false; };
+  }, []);
+
+  const stats = [
+    { label: "Occurrence records", value: occMeta?.totalRecords ?? null },
+    { label: "Epidemiological records", value: epiMeta?.totalRecords ?? null },
+    { label: "Tick species", value: occMeta?.species.length ?? null },
+    { label: "Diseases & pathogens", value: epiMeta?.diseases.length ?? null },
+    { label: "Host species", value: epiMeta?.hosts.length ?? null },
+    { label: "Countries", value: occMeta?.countries.length ?? null },
+  ];
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
       <div>
@@ -25,16 +55,24 @@ export function About() {
         <div className="rounded-lg border p-6 space-y-4" style={{ borderColor: "var(--border)", background: "var(--card-bg)" }}>
           <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Citation</h3>
           <div className="rounded px-4 py-4 text-sm font-mono leading-relaxed" style={{ background: "var(--accent-teal-light)", color: "var(--accent-teal)" }}>
-            African Tick Surveillance Atlas (2024). Continental Tick and Tick-Borne Disease Intelligence Platform.
-            tickatlas.org
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>DOI:</span>
-            <code className="text-xs px-2 py-0.5 rounded" style={{ background: "var(--page-bg)", color: "var(--text-primary)" }}>10.1234/atsa.2024</code>
+            African Tick Surveillance Atlas ({new Date().getFullYear()}). Continental Tick and Tick-Borne Disease
+            Intelligence Platform.
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>License:</span>
             <code className="text-xs px-2 py-0.5 rounded" style={{ background: "var(--page-bg)", color: "var(--text-primary)" }}>CC-BY 4.0</code>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Source code:</span>
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-medium hover:underline"
+              style={{ color: "var(--accent-teal)" }}
+            >
+              github.com/whitneyoduor/african-tick-atlas-platform
+            </a>
           </div>
         </div>
       </div>
@@ -43,7 +81,7 @@ export function About() {
         <h3 className="text-sm font-semibold mb-5" style={{ color: "var(--text-primary)" }}>Platform Features</h3>
         <div className="grid grid-cols-3 gap-6">
           {[
-            { title: "Interactive Maps", desc: "Full-width MapLibre map with layer controls and popup tooltips" },
+            { title: "Interactive Maps", desc: "Full-width MapLibre map with six layers and popup tooltips" },
             { title: "Species Intelligence", desc: "Detailed species reports with host and pathogen associations" },
             { title: "Temporal Trends", desc: "Yearly trend analysis with brush selection and comparison" },
             { title: "Disease Portal", desc: "Comprehensive disease information with vector species" },
@@ -64,11 +102,15 @@ export function About() {
           Data is compiled from peer-reviewed publications, institutional reports, and field surveys.
           Each record includes source attribution through the title and links fields.
         </p>
-        <div className="flex items-center gap-6 text-xs" style={{ color: "var(--text-muted)" }}>
-          <span>500+ publications</span>
-          <span>20+ African countries</span>
-          <span>100+ tick species</span>
-          <span>50+ host species</span>
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-3 text-xs" style={{ color: "var(--text-muted)" }}>
+          {stats.map((s) => (
+            <span key={s.label}>
+              <strong style={{ color: "var(--text-primary)", fontFamily: "monospace" }}>
+                {s.value != null ? s.value.toLocaleString() : "—"}
+              </strong>
+              {" "}{s.label}
+            </span>
+          ))}
         </div>
       </div>
 
@@ -76,7 +118,10 @@ export function About() {
         <h3 className="text-sm font-semibold mb-2">Contact & Support</h3>
         <p className="text-sm" style={{ opacity: 0.85 }}>
           For questions, data contributions, or collaboration inquiries, please contact the ICIPE platform team.
-          Bug reports and feature requests can be submitted through our GitHub repository.
+          Bug reports and feature requests can be submitted through our{" "}
+          <a href={REPO_URL} target="_blank" rel="noreferrer" className="underline" style={{ color: "#D1FAE5" }}>
+            GitHub repository
+          </a>.
         </p>
       </div>
     </div>

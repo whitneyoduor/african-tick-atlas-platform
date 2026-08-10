@@ -42,7 +42,9 @@ export function Header() {
           </button>
           <nav className="flex items-center gap-0">
             {navItems.map((item) => {
-              const active = location.pathname === item.path;
+              const active = item.path === "/"
+                ? location.pathname === "/"
+                : location.pathname === item.path || location.pathname.startsWith(item.path + "/");
               return (
                 <button
                   key={item.path}

@@ -1,16 +1,19 @@
 import { useState } from "react";
 
+const BASE_URL = "http://localhost:3001/api";
+
 export function ApiExplorer() {
   const [copied, setCopied] = useState<string | null>(null);
 
   const endpoints = [
-    { method: "GET", path: "/api/occurrences", desc: "List tick occurrence records (GBIF points) with pagination", params: "page, limit, species, country, yearStart, yearEnd, search" },
-    { method: "GET", path: "/api/occurrences/:id", desc: "Get a single occurrence record by ID", params: "—" },
-    { method: "GET", path: "/api/occurrences/meta/counts", desc: "Get aggregated occurrence counts (species, countries, year range)", params: "—" },
-    { method: "GET", path: "/api/epidemiological", desc: "List epidemiological records (disease, hosts, method) with pagination", params: "page, limit, species, country, host, disease, yearStart, yearEnd, search" },
-    { method: "GET", path: "/api/epidemiological/:id", desc: "Get a single epidemiological record by ID", params: "—" },
-    { method: "GET", path: "/api/epidemiological/meta/counts", desc: "Get aggregated epidemiological counts (species, hosts, diseases, incidence)", params: "—" },
-    { method: "GET", path: "/api/epidemiological/meta/yearly", desc: "Get records per year over time", params: "—" },
+    { method: "GET", path: "/occurrences", desc: "List tick occurrence records (GBIF points) with pagination", params: "page, limit, species, country, yearStart, yearEnd, search" },
+    { method: "GET", path: "/occurrences/:id", desc: "Get a single occurrence record by ID", params: "—" },
+    { method: "GET", path: "/occurrences/meta/counts", desc: "Get aggregated occurrence counts (species, countries, year range)", params: "—" },
+    { method: "GET", path: "/epidemiological", desc: "List epidemiological records (disease, hosts, method) with pagination", params: "page, limit, species, country, host, disease, yearStart, yearEnd, search" },
+    { method: "GET", path: "/epidemiological/:id", desc: "Get a single epidemiological record by ID", params: "—" },
+    { method: "GET", path: "/epidemiological/meta/counts", desc: "Get aggregated epidemiological counts (species, hosts, diseases, incidence)", params: "—" },
+    { method: "GET", path: "/epidemiological/meta/species-detail", desc: "Get the dominant disease, host, and method per tick species", params: "—" },
+    { method: "GET", path: "/epidemiological/meta/yearly", desc: "Get records per year over time", params: "—" },
   ];
 
   const copyToClipboard = async (text: string, key: string) => {
@@ -31,8 +34,12 @@ export function ApiExplorer() {
       <div className="rounded-lg border p-6" style={{ borderColor: "var(--border)", background: "var(--card-bg)" }}>
         <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--text-primary)" }}>Base URL</h3>
         <div className="rounded px-4 py-3 font-mono text-sm" style={{ background: "var(--accent-teal-light)", color: "var(--accent-teal)" }}>
-          https://tickatlas.org/api
+          {BASE_URL}
         </div>
+        <p className="text-xs mt-2 leading-relaxed" style={{ color: "var(--text-muted)" }}>
+          The API is served by the companion Express + SQLite backend (run <code className="text-[10px]" style={{ background: "var(--page-bg)", padding: "1px 4px", borderRadius: 2 }}>pnpm dev</code> inside the <code className="text-[10px]" style={{ background: "var(--page-bg)", padding: "1px 4px", borderRadius: 2 }}>server</code> directory).
+          The interactive pages on this site work with bundled data when the backend is not running.
+        </p>
       </div>
 
       <div className="space-y-4">
@@ -50,16 +57,16 @@ export function ApiExplorer() {
             </div>
             <div className="px-5 py-3 border-t flex items-center gap-2" style={{ borderColor: "var(--border)", background: "var(--page-bg)" }}>
               <span className="text-xs" style={{ color: "var(--text-muted)" }}>Example:</span>
-              <code className="text-xs font-mono flex-1" style={{ color: "var(--text-primary)" }}>
+              <code className="text-xs font-mono flex-1 break-all" style={{ color: "var(--text-primary)" }}>
                 {ep.method === "GET" && ep.path.includes(":id")
-                  ? `curl ${ep.path.replace(":id", "1")}`
-                  : `curl "${ep.path}?limit=10"`}
+                  ? `curl "${BASE_URL}${ep.path.replace(":id", "1")}"`
+                  : `curl "${BASE_URL}${ep.path}?limit=10"`}
               </code>
               <button
                 onClick={() => copyToClipboard(
                   ep.method === "GET" && ep.path.includes(":id")
-                    ? `curl ${ep.path.replace(":id", "1")}`
-                    : `curl "${ep.path}?limit=10"`,
+                    ? `curl "${BASE_URL}${ep.path.replace(":id", "1")}"`
+                    : `curl "${BASE_URL}${ep.path}?limit=10"`,
                   ep.path
                 )}
                 className="text-xs font-medium px-3 py-1 rounded transition-colors"
@@ -90,7 +97,7 @@ export function ApiExplorer() {
             <tbody>
               {[
                 { param: "page", type: "number", desc: "Page number (default: 1)" },
-                { param: "limit", type: "number", desc: "Records per page (default: 50, max: 50000)" },
+                { param: "limit", type: "number", desc: "Records per page (default: 50, max: 200000)" },
                 { param: "species", type: "string", desc: "Filter by tick species name" },
                 { param: "country", type: "string", desc: "Filter by country name" },
                 { param: "host", type: "string", desc: "Filter by host species (epidemiological only)" },

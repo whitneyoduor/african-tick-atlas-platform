@@ -114,7 +114,6 @@ function SearchableSelect({ value, options, placeholder, label, onChange }: {
 
 export function MapPage() {
   const [activeLayer, setActiveLayer] = useState<Layer>("occurrence");
-  const [geoLevel, setGeoLevel] = useState<"points" | "country" | "region">("points");
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [meta, setMeta] = useState<OccurrenceMeta | null>(null);
   const [epiMeta, setEpiMeta] = useState<EpidemiologicalMeta | null>(null);
@@ -126,7 +125,7 @@ export function MapPage() {
     const ctrl = new AbortController();
     Promise.all([
       fetchOccurrenceMeta(ctrl.signal),
-      fetchOccurrences({ limit: 50000, signal: ctrl.signal }),
+      fetchOccurrences({ limit: 200000, signal: ctrl.signal }),
       fetchEpidemiologicalMeta(ctrl.signal),
       fetchEpidemiologicalSpeciesDetail(ctrl.signal),
     ])
@@ -230,25 +229,6 @@ export function MapPage() {
             </button>
           ))}
         </div>
-
-        <div className="mt-auto p-4 border-t" style={{ borderColor: "var(--border)" }}>
-          <h4 className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Geography</h4>
-          <div className="flex flex-col gap-1">
-            {(["points", "country", "region"] as const).map((level) => (
-              <button
-                key={level}
-                onClick={() => setGeoLevel(level)}
-                className="text-xs px-3 py-1.5 rounded font-medium transition-colors"
-                style={{
-                  color: geoLevel === level ? "var(--text-primary)" : "var(--text-muted)",
-                  background: geoLevel === level ? "var(--page-bg)" : "transparent",
-                }}
-              >
-                {level === "points" ? "Point Data" : level === "country" ? "By Country" : "By Region"}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Center - Map */}
@@ -327,9 +307,14 @@ export function MapPage() {
                 ["Anaplasma spp.", "#EA580C"],
                 ["Ehrlichia spp.", "#D97706"],
                 ["CCHFV", "#7C3AED"],
+                ["Crimean-Congo haemorrhagic fever", "#6D28D9"],
                 ["Coxiella burnetii", "#2563EB"],
                 ["Babesia spp.", "#059669"],
                 ["Theileria spp.", "#0891B2"],
+                ["Ehrlichia ruminantium", "#B45309"],
+                ["Rickettsia africae", "#E11D48"],
+                ["Anaplasma marginale", "#C2410C"],
+                ["Anaplasma phagocytophilum", "#9333EA"],
                 ["Borrelia spp.", "#4F46E5"],
                 ["Other", "#6B7280"],
               ] as [string, string][]).map(([label, color]) => (

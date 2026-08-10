@@ -124,7 +124,7 @@ function buildGeoJSON(records: Occurrence[], speciesMap: SpeciesDetailMap): GeoJ
   return {
     type: "FeatureCollection",
     features: records
-      .filter((r) => r.latitude && r.longitude && isOnLand(r.latitude, r.longitude))
+      .filter((r) => r.latitude != null && r.longitude != null && isOnLand(r.latitude, r.longitude))
       .map((r) => {
         const attrs = speciesMap[(r.species || "").trim().toLowerCase()];
         return {

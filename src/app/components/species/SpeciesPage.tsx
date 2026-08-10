@@ -6,16 +6,21 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 export function SpeciesPage() {
   const { name } = useParams<{ name: string }>();
   const navigate = useNavigate();
-  const decoded = decodeURIComponent(name || "");
+  const species = name || "";
   const [records, setRecords] = useState<EpidemiologicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!decoded) return;
-    fetchEpidemiological({ species: decoded, limit: 50000 })
-      .then((res) => { setRecords(res.data); setLoading(false); })
-      .catch(() => { setLoading(false); });
-  }, [decoded]);
+    if (!species) {
+      setLoading(false);
+      return;
+    }
+    let active = true;
+    fetchEpidemiological({ species, limit: 50000 })
+      .then((res) => { if (active) { setRecords(res.data); setLoading(false); } })
+      .catch(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [species]);
 
   const countryData = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -54,6 +59,20 @@ export function SpeciesPage() {
     </div>
   );
 
+  if (!species || records.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-6 py-6" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
+        <button onClick={() => navigate("/species")} className="text-sm mb-4 hover:underline" style={{ color: "#134E4A" }}>&larr; Back to Species</button>
+        <h1 className="text-2xl font-semibold" style={{ color: "#1C1917" }}>{species || "Species"}</h1>
+        <div className="mt-4 px-5 py-8 text-center" style={{ background: "#FFFFFF", border: "1px solid #E2E5DE" }}>
+          <p className="text-sm" style={{ color: "#57534E" }}>
+            No records found for this species. Try the search box in the header.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const hostCount = new Set(records.map(r => r.relatedHosts).filter(Boolean)).size;
   const diseaseCount = new Set(records.map(r => r.epidemiologicalDisease).filter(Boolean)).size;
   const countryCount = new Set(records.map(r => r.country).filter(Boolean)).size;
@@ -62,7 +81,7 @@ export function SpeciesPage() {
     <div className="max-w-7xl mx-auto px-6 py-6" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div className="mb-6">
         <button onClick={() => navigate("/species")} className="text-sm mb-1 hover:underline" style={{ color: "#134E4A" }}>&larr; Back to Species</button>
-        <h1 className="text-2xl font-semibold" style={{ color: "#1C1917" }}>{decoded}</h1>
+        <h1 className="text-2xl font-semibold" style={{ color: "#1C1917" }}>{species}</h1>
         <p className="text-sm mt-1" style={{ color: "#57534E" }}>
           {records.length.toLocaleString()} records &middot; {countryCount} countries &middot; {hostCount} hosts &middot; {diseaseCount} diseases
         </p>

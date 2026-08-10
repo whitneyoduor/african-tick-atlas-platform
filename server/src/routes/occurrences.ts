@@ -16,7 +16,7 @@ occurrenceRouter.get("/", async (req: Request, res: Response) => {
     } = req.query;
 
     const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
-    const limitNum = Math.min(50000, Math.max(1, parseInt(limit as string, 10) || 50));
+    const limitNum = Math.min(200000, Math.max(1, parseInt(limit as string, 10) || 50));
     const skip = (pageNum - 1) * limitNum;
 
     const where: any = {};

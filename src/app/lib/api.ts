@@ -294,7 +294,7 @@ export async function fetchEpidemiologicalYearly(signal?: AbortSignal): Promise<
 }
 
 export function exportAsCSV(records: EpidemiologicalRecord[]): void {
-  const headers = ["id", "species", "yearOfStudy", "country", "title", "links", "epidemiologicalDisease", "methodOfExtraction", "relatedHosts", "epidemiologicalIncidences"];
+  const headers = ["id", "species", "yearOfStudy", "yearStart", "yearEnd", "country", "title", "links", "epidemiologicalDisease", "methodOfExtraction", "relatedHosts", "epidemiologicalIncidences"];
   const csv = [
     headers.join(","),
     ...records.map((r) =>

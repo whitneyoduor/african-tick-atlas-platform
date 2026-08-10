@@ -36,8 +36,27 @@ export default function App() {
           <Route path="downloads" element={<Suspense fallback={<Loading />}><Downloads /></Suspense>} />
           <Route path="api" element={<Suspense fallback={<Loading />}><ApiExplorer /></Suspense>} />
           <Route path="about" element={<Suspense fallback={<Loading />}><About /></Suspense>} />
+          <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
     </BrowserRouter>
+  );
+}
+
+function NotFound() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[50vh] px-6 text-center">
+      <h1 className="text-2xl font-semibold" style={{ color: "var(--text-primary)" }}>Page not found</h1>
+      <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
+        The page you are looking for does not exist.
+      </p>
+      <a
+        href="/"
+        className="mt-4 text-xs font-medium px-4 py-2 rounded"
+        style={{ background: "var(--accent-teal)", color: "#fff" }}
+      >
+        Back to Maps
+      </a>
+    </div>
   );
 }

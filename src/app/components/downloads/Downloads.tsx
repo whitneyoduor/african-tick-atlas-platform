@@ -27,7 +27,7 @@ export function Downloads() {
         setRecordCount(records.length);
         exportAsCSV(records);
       } else {
-        const res = await fetchOccurrences({ limit: 50000, signal: controller.signal });
+        const res = await fetchOccurrences({ limit: 200000, signal: controller.signal });
         if (controller.signal.aborted) return;
         const records = res.data;
         setRecordCount(records.length);
@@ -140,6 +140,8 @@ export function Downloads() {
               {[
                 { field: "species", desc: "Tick species name" },
                 { field: "yearOfStudy", desc: "Year or date range" },
+                { field: "yearStart", desc: "Study start year" },
+                { field: "yearEnd", desc: "Study end year" },
                 { field: "country", desc: "Country of collection" },
                 { field: "epidemiologicalDisease", desc: "Associated disease" },
                 { field: "relatedHosts", desc: "Host species" },
