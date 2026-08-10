@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchEpidemiological, type EpidemiologicalRecord } from "../../lib/api";
-import { NarrativePanel } from "../common/NarrativePanel";
 import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, SourceNote, PageLoader } from "../common/Atlas";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Brush } from "recharts";
 
@@ -119,59 +118,6 @@ export function Trends() {
   const minYear = yearlyData.length > 0 ? parseInt(yearlyData[0].year) : 1930;
   const maxYear = yearlyData.length > 0 ? parseInt(yearlyData[yearlyData.length - 1].year) : 2025;
 
-  const narrative = useMemo(() => {
-    if (yearlyData.length === 0) return null;
-
-    const total = records.length;
-    const withYear = yearlyData.reduce((s, d) => s + d.records, 0);
-    const pctWithYear = total > 0 ? Math.round((withYear / total) * 100) : 0;
-    const years = yearlyData.map((d) => parseInt(d.year));
-    const lo = Math.min(...years);
-    const hi = Math.max(...years);
-
-    const since2000 = yearlyData.filter((d) => parseInt(d.year) >= 2000).reduce((s, d) => s + d.records, 0);
-    const pctSince2000 = withYear > 0 ? Math.round((since2000 / withYear) * 100) : 0;
-
-    const recent = yearlyData.filter((d) => parseInt(d.year) >= 2015 && parseInt(d.year) <= 2024).reduce((s, d) => s + d.records, 0);
-    const prior = yearlyData.filter((d) => parseInt(d.year) >= 2005 && parseInt(d.year) <= 2014).reduce((s, d) => s + d.records, 0);
-    const growth = prior > 0 ? `a ${Math.round((recent / prior) * 10) / 10}x jump` : "a sharp rise";
-
-    const active: Record<string, number> = {};
-    yearlyData.forEach((d) => {
-      const yr = yearlyMap.get(parseInt(d.year));
-      if (yr) yr.species.forEach((s) => { active[s] = (active[s] || 0) + 1; });
-    });
-    const top = Object.entries(active).sort((a, b) => b[1] - a[1])[0];
-
-    const topCountries: Record<string, number> = {};
-    records.forEach((r) => { if (r.country) topCountries[r.country] = (topCountries[r.country] || 0) + 1; });
-    const topCountriesList = Object.entries(topCountries).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n]) => n);
-
-    const points = [
-      {
-        title: "Coverage",
-        text: `${withYear.toLocaleString()} of ${total.toLocaleString()} records (${pctWithYear}%) carry a study year, spanning ${lo}–${hi}. The most consistently surveyed countries are ${topCountriesList.join(", ")}.`,
-      },
-      {
-        title: "The modern surge",
-        text: `${pctSince2000}% of all records with a year were produced from 2000 onward, and the last decade (2015–2024) shows ${growth} over the preceding ten years.`,
-      },
-      {
-        title: "Who is being studied",
-        text: top
-          ? `${top[0]} is the most persistently tracked species, appearing in records across ${top[1]} different years in this window.`
-          : "No single species dominates the record across years.",
-      },
-    ];
-
-    let takeaway = "The trajectory reflects a real scientific shift: early records come from classical taxonomic and veterinary surveys, while the post-2000 rise tracks the spread of molecular screening (PCR-based pathogen detection) and One Health surveillance for tick-borne disease.";
-    if (pctSince2000 < 40) {
-      takeaway = "This dataset is weighted toward historical surveys, making it a valuable baseline for how tick distributions and surveillance priorities have shifted over the decades.";
-    }
-
-    return { headline: "African tick surveillance is a recent, fast-growing enterprise — most of what we know has been collected since 2000.", points, takeaway };
-  }, [records, yearlyData, yearlyMap]);
-
   const handleBrushChange = (e: any) => {
     if (e && e.startIndex !== undefined && e.endIndex !== undefined) {
       const start = yearlyData[e.startIndex];
@@ -199,15 +145,6 @@ export function Trends() {
             </>
           }
         />
-
-        {narrative && (
-          <NarrativePanel
-            kicker="The story in the data"
-            headline={narrative.headline}
-            points={narrative.points}
-            takeaway={narrative.takeaway}
-          />
-        )}
 
         <FilterBar>
           <FilterGroup label="Metric">

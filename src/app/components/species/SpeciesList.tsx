@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router";
 import { fetchEpidemiological, fetchEpidemiologicalMeta, type EpidemiologicalRecord, type EpidemiologicalMeta } from "../../lib/api";
 import { prioritizeSpecies } from "../../lib/species";
-import { NarrativePanel } from "../common/NarrativePanel";
 import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader } from "../common/Atlas";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -53,66 +52,6 @@ export function SpeciesList() {
     () => prioritizeSpecies((meta?.species || []).filter((s) => s && s.name)),
     [meta]
   );
-
-  const speciesFact: Record<string, string> = {
-    "amblyomma variegatum": "the tropical bont tick, one of Africa's most damaging livestock vectors and a principal transmitter of heartwater (Ehrlichia ruminantium)",
-    "rhipicephalus appendiculatus": "the brown ear tick, primary vector of East Coast fever (Theileria parva)",
-    "rhipicephalus sanguineus": "the brown dog tick, vector of canine babesiosis and the agent of Mediterranean spotted fever",
-    "rhipicephalus microplus": "the Asian blue tick, ranked among the world's most economically damaging cattle ticks",
-    "hyalomma marginatum": "a major vector of Crimean-Congo haemorrhagic fever virus",
-    "hyalomma rufipes": "a vector of Crimean-Congo haemorrhagic fever virus and Rickettsia aeschlimannii",
-    "amblyomma hebraeum": "the South African bont tick, a vector of heartwater",
-    "amblyomma lepidum": "a vector of heartwater across dry sub-Saharan rangelands",
-    "rhipicephalus evertsi": "the red-legged tick, a vector of Babesia equi and Ehrlichia ruminantium",
-    "hyalomma truncatum": "a vector of Crimean-Congo haemorrhagic fever virus and a cause of tick toxicosis",
-  };
-
-  const narrative = useMemo(() => {
-    if (!meta || meta.species.length === 0) return null;
-    const total = meta.totalRecords;
-    const raw = meta.species.slice().sort((a, b) => b.count - a.count);
-    const top5 = raw.slice(0, 5);
-    const top5Count = top5.reduce((s, x) => s + x.count, 0);
-    const pctTop5 = total > 0 ? Math.round((top5Count / total) * 100) : 0;
-
-    const genus: Record<string, number> = {};
-    raw.forEach((s) => {
-      const g = (s.name.split(" ")[0] || "Other").toLowerCase();
-      genus[g] = (genus[g] || 0) + s.count;
-    });
-    const raShare = genus["rhipicephalus"] || 0;
-    const amShare = genus["amblyomma"] || 0;
-    const pctRA = total > 0 ? Math.round((raShare / total) * 100) : 0;
-    const pctAm = total > 0 ? Math.round((amShare / total) * 100) : 0;
-
-    const top = raw[0];
-    const fact = speciesFact[top.name.toLowerCase()];
-
-    const points = [
-      {
-        title: "Concentration",
-        text: `Five species account for ${pctTop5}% of all ${total.toLocaleString()} epidemiological records — surveillance in Africa is heavily focused on a small core of ticks.`,
-      },
-      {
-        title: "Two dominant genera",
-        text: `Rhipicephalus and Amblyomma together represent ${pctRA + pctAm}% of records (${pctRA}% and ${pctAm}%, respectively). These are the genera that carry the most important livestock and zoonotic pathogens on the continent.`,
-      },
-      {
-        title: "The most-recorded species",
-        text: `${top.name} leads with ${top.count.toLocaleString()} records${fact ? ` — ${fact}` : ""}.`,
-      },
-      {
-        title: "Geographic reach",
-        text: `These species are documented across ${meta.countries.length} African countries, spanning West, East, and Southern African livestock systems.`,
-      },
-    ];
-
-    return {
-      headline: "A few hard-working ticks dominate Africa's tick literature — and they are precisely the ones that matter most to livestock and public health.",
-      points,
-      takeaway: "This concentration is not a data quirk: Amblyomma and Rhipicephalus species transmit East Coast fever, anaplasmosis, babesiosis, heartwater, and Crimean-Congo haemorrhagic fever, so they dominate both research effort and real disease burden.",
-    };
-  }, [meta]);
 
   const overview = useMemo(() => {
     if (!meta) return null;
@@ -173,15 +112,6 @@ export function SpeciesList() {
             ) : "Loading species data..."
           }
         />
-
-        {narrative && (
-          <NarrativePanel
-            kicker="The story in the data"
-            headline={narrative.headline}
-            points={narrative.points}
-            takeaway={narrative.takeaway}
-          />
-        )}
 
         <FilterBar>
           <FilterGroup label="Species">
