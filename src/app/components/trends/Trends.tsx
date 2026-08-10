@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchEpidemiological, type EpidemiologicalRecord } from "../../lib/api";
 import { NarrativePanel } from "../common/NarrativePanel";
+import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, SourceNote, PageLoader } from "../common/Atlas";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Brush } from "recharts";
 
 function extractYear(raw: string | null): number | null {
@@ -18,6 +19,14 @@ const METRICS = [
 ] as const;
 
 type MetricKey = (typeof METRICS)[number]["key"];
+
+const METRIC_COLORS: Record<MetricKey, string> = {
+  records: atlas.teal,
+  species: "#2563EB",
+  hosts: "#D97706",
+  diseases: "#DC2626",
+  countries: "#7C3AED",
+};
 
 export function Trends() {
   const [records, setRecords] = useState<EpidemiologicalRecord[]>([]);
@@ -173,180 +182,146 @@ export function Trends() {
     }
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <span className="text-[11px]" style={{ color: "#A8A29E" }}>Loading...</span>
-    </div>
-  );
+  if (loading) return <PageLoader />;
+
+  const metricColor = METRIC_COLORS[metric];
+  const activeMetric = METRICS.find((m) => m.key === metric);
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-6" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
-
-      {/* Page header */}
-      <div className="mb-5">
-        <h1 className="text-lg font-semibold" style={{ color: "#1C1917" }}>Trends</h1>
-        <p className="text-[12px] mt-0.5" style={{ color: "#57534E" }}>
-          {stats.records.toLocaleString()} records &middot; {stats.species} species &middot; {stats.countries} countries &middot; {brushRange[0]}&ndash;{brushRange[1]}
-        </p>
-      </div>
-
-      {narrative && (
-        <NarrativePanel
-          kicker="The story in the data"
-          headline={narrative.headline}
-          points={narrative.points}
-          takeaway={narrative.takeaway}
+    <div style={{ minHeight: "100vh", background: atlas.bg }}>
+      <div className="max-w-7xl mx-auto px-6 py-8" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
+        <PageHeader
+          title="Trends"
+          subtitle={
+            <>
+              How African tick surveillance has changed over time &middot;{" "}
+              <span style={{ fontFamily: "monospace" }}>{stats.records.toLocaleString()}</span> records in the selected period
+            </>
+          }
         />
-      )}
 
-      {/* Filters bar */}
-      <div className="flex items-center gap-4 flex-wrap px-4 py-3 mb-5" style={{ background: "#FFFFFF", border: "1px solid #E2E5DE" }}>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-medium" style={{ color: "#A8A29E" }}>METRIC</span>
-          <select
-            value={metric}
-            onChange={(e) => setMetric(e.target.value as MetricKey)}
-            className="text-[11px] border px-2 py-1 outline-none"
-            style={{ borderColor: "#E2E5DE", color: "#1C1917", background: "#F0F5F1", minWidth: 130 }}
-          >
-            {METRICS.map((m) => (
-              <option key={m.key} value={m.key}>{m.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-medium" style={{ color: "#A8A29E" }}>SPECIES</span>
-          <select
-            value={speciesFilter}
-            onChange={(e) => setSpeciesFilter(e.target.value)}
-            className="text-[11px] border px-2 py-1 outline-none"
-            style={{ borderColor: "#E2E5DE", color: "#1C1917", background: "#F0F5F1", minWidth: 160 }}
-          >
-            <option value="all">All Species</option>
-            {speciesList.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-medium" style={{ color: "#A8A29E" }}>COUNTRY</span>
-          <select
-            value={countryFilter}
-            onChange={(e) => setCountryFilter(e.target.value)}
-            className="text-[11px] border px-2 py-1 outline-none"
-            style={{ borderColor: "#E2E5DE", color: "#1C1917", background: "#F0F5F1", minWidth: 130 }}
-          >
-            <option value="all">All Countries</option>
-            {countryList.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-medium" style={{ color: "#A8A29E" }}>YEAR</span>
-          <div className="flex items-center gap-1">
-            <input
-              type="number"
-              value={brushRange[0]}
-              onChange={(e) => setBrushRange([parseInt(e.target.value) || minYear, brushRange[1]])}
-              className="w-[72px] text-[11px] border px-2 py-1 bg-white text-center outline-none"
-              style={{ borderColor: "#E2E5DE", color: "#1C1917", fontFamily: "monospace" }}
-              min={minYear}
-              max={brushRange[1]}
-            />
-            <span style={{ color: "#A8A29E" }}>&ndash;</span>
-            <input
-              type="number"
-              value={brushRange[1]}
-              onChange={(e) => setBrushRange([brushRange[0], parseInt(e.target.value) || maxYear])}
-              className="w-[72px] text-[11px] border px-2 py-1 bg-white text-center outline-none"
-              style={{ borderColor: "#E2E5DE", color: "#1C1917", fontFamily: "monospace" }}
-              min={brushRange[0]}
-              max={maxYear}
-            />
-          </div>
-        </div>
-      </div>
+        {narrative && (
+          <NarrativePanel
+            kicker="The story in the data"
+            headline={narrative.headline}
+            points={narrative.points}
+            takeaway={narrative.takeaway}
+          />
+        )}
 
-      {/* Stat counters */}
-      <div className="grid grid-cols-5 gap-px mb-5" style={{ background: "#E2E5DE" }}>
-        {METRICS.map((m) => (
-          <button
-            key={m.key}
-            onClick={() => setMetric(m.key)}
-            className="px-4 py-3 text-left cursor-pointer transition-colors"
-            style={{
-              background: metric === m.key ? "#D1FAE5" : "#FFFFFF",
-              borderBottom: metric === m.key ? "2px solid #D97706" : "2px solid transparent",
-            }}
-          >
-            <div className="text-[10px] font-medium" style={{ color: "#A8A29E" }}>{m.label.toUpperCase()}</div>
-            <div className="text-xl font-semibold mt-0.5" style={{ color: "#1C1917", fontFamily: "monospace" }}>
-              {(stats as any)[m.key]?.toLocaleString() || "0"}
+        <FilterBar>
+          <FilterGroup label="Metric">
+            <Select value={metric} onChange={(v) => setMetric(v as MetricKey)} minWidth={150}>
+              {METRICS.map((m) => (
+                <option key={m.key} value={m.key}>{m.label}</option>
+              ))}
+            </Select>
+          </FilterGroup>
+          <FilterGroup label="Species">
+            <Select value={speciesFilter} onChange={setSpeciesFilter} minWidth={170}>
+              <option value="all">All Species</option>
+              {speciesList.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </Select>
+          </FilterGroup>
+          <FilterGroup label="Country">
+            <Select value={countryFilter} onChange={setCountryFilter} minWidth={150}>
+              <option value="all">All Countries</option>
+              {countryList.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </Select>
+          </FilterGroup>
+          <FilterGroup label="Year Range">
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                value={brushRange[0]}
+                onChange={(e) => setBrushRange([parseInt(e.target.value) || minYear, brushRange[1]])}
+                className="w-[74px] text-[13px] border px-2 py-1.5 rounded-md bg-white text-center outline-none"
+                style={{ borderColor: atlas.borderStrong, color: atlas.text, fontFamily: "monospace" }}
+                min={minYear}
+                max={brushRange[1]}
+              />
+              <span style={{ color: atlas.textMuted }}>–</span>
+              <input
+                type="number"
+                value={brushRange[1]}
+                onChange={(e) => setBrushRange([brushRange[0], parseInt(e.target.value) || maxYear])}
+                className="w-[74px] text-[13px] border px-2 py-1.5 rounded-md bg-white text-center outline-none"
+                style={{ borderColor: atlas.borderStrong, color: atlas.text, fontFamily: "monospace" }}
+                min={brushRange[0]}
+                max={maxYear}
+              />
             </div>
-          </button>
-        ))}
-      </div>
+          </FilterGroup>
+        </FilterBar>
 
-      {/* Chart */}
-      <div className="mb-5" style={{ background: "#FFFFFF", border: "1px solid #E2E5DE" }}>
-        <div className="px-4 py-2.5 border-b flex items-center justify-between" style={{ borderColor: "#E2E5DE" }}>
-          <h3 className="text-[11px] font-semibold" style={{ color: "#1C1917" }}>
-            {METRICS.find((m) => m.key === metric)?.label} Over Time
-          </h3>
-          <span className="text-[10px]" style={{ color: "#A8A29E", fontFamily: "monospace" }}>
-            {brushRange[0]} &ndash; {brushRange[1]}
-          </span>
-        </div>
-        <div className="px-2 py-2">
-          <ResponsiveContainer width="100%" height={340}>
+        <StatCards
+          className="grid-cols-2 lg:grid-cols-5"
+          items={METRICS.map((m) => ({
+            label: m.label,
+            value: (stats as any)[m.key] ?? 0,
+            active: metric === m.key,
+            onClick: () => setMetric(m.key),
+          }))}
+        />
+
+        <Panel
+          title={
+            <span style={{ color: metricColor }}>
+              {activeMetric?.label} Over Time
+            </span>
+          }
+          action={
+            <span className="text-[11px]" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
+              {brushRange[0]} – {brushRange[1]}
+            </span>
+          }
+          className="mb-6"
+        >
+          <ResponsiveContainer width="100%" height={360}>
             <AreaChart data={yearlyData}>
               <defs>
                 <linearGradient id="colorMetric" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#134E4A" stopOpacity={0.12} />
-                  <stop offset="95%" stopColor="#134E4A" stopOpacity={0.01} />
+                  <stop offset="5%" stopColor={metricColor} stopOpacity={0.18} />
+                  <stop offset="95%" stopColor={metricColor} stopOpacity={0.01} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#EBEDE9" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={atlas.grid} vertical={false} />
               <XAxis
                 dataKey="year"
-                tick={{ fontSize: 10, fill: "#A8A29E", fontFamily: "monospace" }}
+                tick={{ fontSize: 10, fill: atlas.textMuted, fontFamily: "monospace" }}
                 tickLine={false}
-                axisLine={{ stroke: "#E2E5DE" }}
+                axisLine={{ stroke: atlas.border }}
                 interval="preserveStartEnd"
                 minTickGap={40}
               />
               <YAxis
-                tick={{ fontSize: 10, fill: "#A8A29E", fontFamily: "monospace" }}
+                tick={{ fontSize: 10, fill: atlas.textMuted, fontFamily: "monospace" }}
                 tickLine={false}
                 axisLine={false}
                 width={50}
               />
               <Tooltip
-                contentStyle={{
-                  borderRadius: 2,
-                  border: "1px solid #E2E5DE",
-                  fontSize: 11,
-                  fontFamily: "monospace",
-                  background: "#FFFFFF",
-                  padding: "6px 10px",
-                }}
-                formatter={(value: number) => [value.toLocaleString(), METRICS.find((m) => m.key === metric)?.label]}
+                contentStyle={tooltipStyle}
+                formatter={(value: number) => [value.toLocaleString(), activeMetric?.label]}
               />
               <Area
                 type="monotone"
                 dataKey={metric}
-                stroke="#134E4A"
-                strokeWidth={1.5}
+                stroke={metricColor}
+                strokeWidth={2}
                 fill="url(#colorMetric)"
                 dot={false}
-                activeDot={{ r: 3, fill: "#134E4A", stroke: "#fff", strokeWidth: 1.5 }}
+                activeDot={{ r: 4, fill: metricColor, stroke: "#fff", strokeWidth: 2 }}
               />
               <Brush
                 dataKey="year"
-                height={20}
-                stroke="#D1FAE5"
-                fill="#F0F5F1"
+                height={22}
+                stroke={atlas.teal}
+                fill="#F0F4F3"
                 travellerWidth={8}
                 onChange={handleBrushChange}
                 startIndex={0}
@@ -355,74 +330,66 @@ export function Trends() {
               />
             </AreaChart>
           </ResponsiveContainer>
-        </div>
-      </div>
+        </Panel>
 
-      {/* Bottom tables */}
-      <div className="grid grid-cols-2 gap-px" style={{ background: "#E2E5DE" }}>
-
-        {/* Top Species */}
-        <div style={{ background: "#FFFFFF" }}>
-          <div className="px-4 py-2.5 border-b" style={{ borderColor: "#E2E5DE" }}>
-            <h3 className="text-[11px] font-semibold" style={{ color: "#1C1917" }}>Top Species in Selected Range</h3>
-          </div>
-          <div className="overflow-y-auto" style={{ maxHeight: 320 }}>
-            <table className="w-full text-[11px]">
-              <thead>
-                <tr className="border-b" style={{ borderColor: "#EBEDE9" }}>
-                  <th className="text-left px-4 py-1.5 font-medium" style={{ color: "#A8A29E", background: "#F0F5F1" }}>#</th>
-                  <th className="text-left px-4 py-1.5 font-medium" style={{ color: "#A8A29E", background: "#F0F5F1" }}>Species</th>
-                  <th className="text-right px-4 py-1.5 font-medium" style={{ color: "#A8A29E", background: "#F0F5F1" }}>Years Active</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  const counts: Record<string, number> = {};
-                  brushedData.forEach((d) => {
-                    const yr = yearlyMap.get(parseInt(d.year));
-                    if (yr) yr.species.forEach((s) => { counts[s] = (counts[s] || 0) + 1; });
-                  });
-                  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([name, count], i) => (
-                    <tr key={name} className="border-b" style={{ borderColor: "#EBEDE9" }}>
-                      <td className="px-4 py-1.5" style={{ color: "#D1FAE5", fontFamily: "monospace" }}>{i + 1}</td>
-                      <td className="px-4 py-1.5 font-medium" style={{ color: "#1C1917" }}>{name}</td>
-                      <td className="px-4 py-1.5 text-right" style={{ color: "#57534E", fontFamily: "monospace" }}>{count}</td>
-                    </tr>
-                  ));
-                })()}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Yearly Breakdown */}
-        <div style={{ background: "#FFFFFF" }}>
-          <div className="px-4 py-2.5 border-b" style={{ borderColor: "#E2E5DE" }}>
-            <h3 className="text-[11px] font-semibold" style={{ color: "#1C1917" }}>Yearly Breakdown</h3>
-          </div>
-          <div className="overflow-y-auto" style={{ maxHeight: 320 }}>
-            <table className="w-full text-[11px]">
-              <thead>
-                <tr className="border-b" style={{ borderColor: "#EBEDE9" }}>
-                  <th className="text-left px-4 py-1.5 font-medium" style={{ color: "#A8A29E", background: "#F0F5F1" }}>Year</th>
-                  <th className="text-right px-4 py-1.5 font-medium" style={{ color: "#A8A29E", background: "#F0F5F1" }}>Records</th>
-                  <th className="text-right px-4 py-1.5 font-medium" style={{ color: "#A8A29E", background: "#F0F5F1" }}>Species</th>
-                  <th className="text-right px-4 py-1.5 font-medium" style={{ color: "#A8A29E", background: "#F0F5F1" }}>Hosts</th>
-                </tr>
-              </thead>
-              <tbody>
-                {brushedData.slice().reverse().map((d) => (
-                  <tr key={d.year} className="border-b" style={{ borderColor: "#EBEDE9" }}>
-                    <td className="px-4 py-1.5 font-medium" style={{ color: "#1C1917", fontFamily: "monospace" }}>{d.year}</td>
-                    <td className="px-4 py-1.5 text-right" style={{ color: "#57534E", fontFamily: "monospace" }}>{d.records.toLocaleString()}</td>
-                    <td className="px-4 py-1.5 text-right" style={{ color: "#57534E", fontFamily: "monospace" }}>{d.species}</td>
-                    <td className="px-4 py-1.5 text-right" style={{ color: "#57534E", fontFamily: "monospace" }}>{d.hosts}</td>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Panel title="Top Species in Selected Range" className="h-full">
+            <div className="overflow-y-auto" style={{ maxHeight: 340 }}>
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr className="border-b" style={{ borderColor: atlas.border }}>
+                    <th className="text-left px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>#</th>
+                    <th className="text-left px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Species</th>
+                    <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Years Active</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const counts: Record<string, number> = {};
+                    brushedData.forEach((d) => {
+                      const yr = yearlyMap.get(parseInt(d.year));
+                      if (yr) yr.species.forEach((s) => { counts[s] = (counts[s] || 0) + 1; });
+                    });
+                    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([name, count], i) => (
+                      <tr key={name} className="border-b" style={{ borderColor: atlas.grid }}>
+                        <td className="px-3 py-1.5" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>{i + 1}</td>
+                        <td className="px-3 py-1.5 font-medium" style={{ color: atlas.text }}>{name}</td>
+                        <td className="px-3 py-1.5 text-right" style={{ color: atlas.textSub, fontFamily: "monospace" }}>{count}</td>
+                      </tr>
+                    ));
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+
+          <Panel title="Yearly Breakdown" className="h-full">
+            <div className="overflow-y-auto" style={{ maxHeight: 340 }}>
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr className="border-b" style={{ borderColor: atlas.border }}>
+                    <th className="text-left px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Year</th>
+                    <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Records</th>
+                    <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Species</th>
+                    <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Hosts</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {brushedData.slice().reverse().map((d) => (
+                    <tr key={d.year} className="border-b" style={{ borderColor: atlas.grid }}>
+                      <td className="px-3 py-1.5 font-medium" style={{ color: atlas.text, fontFamily: "monospace" }}>{d.year}</td>
+                      <td className="px-3 py-1.5 text-right" style={{ color: atlas.textSub, fontFamily: "monospace" }}>{d.records.toLocaleString()}</td>
+                      <td className="px-3 py-1.5 text-right" style={{ color: atlas.textSub, fontFamily: "monospace" }}>{d.species}</td>
+                      <td className="px-3 py-1.5 text-right" style={{ color: atlas.textSub, fontFamily: "monospace" }}>{d.hosts}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
         </div>
+
+        <SourceNote />
       </div>
     </div>
   );

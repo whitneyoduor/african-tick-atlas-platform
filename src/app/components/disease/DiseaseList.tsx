@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { fetchEpidemiological, fetchEpidemiologicalMeta, type EpidemiologicalRecord, type EpidemiologicalMeta } from "../../lib/api";
 import { NarrativePanel } from "../common/NarrativePanel";
+import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader } from "../common/Atlas";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export function DiseaseList() {
@@ -125,175 +126,143 @@ export function DiseaseList() {
     };
   }, [records, selected]);
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <span className="text-sm" style={{ color: "#A8A29E" }}>Loading...</span>
-    </div>
-  );
+  if (loading) return <PageLoader />;
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-6" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
-
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold" style={{ color: "#1C1917" }}>Diseases &amp; Pathogens</h1>
-        <p className="text-sm mt-1" style={{ color: "#57534E" }}>
-          {overview ? `${overview.totalDiseases} diseases and pathogens detected in ticks across ${overview.totalCountries} countries &middot; ${overview.totalRecords.toLocaleString()} total records` : "Loading disease data..."}
-        </p>
-      </div>
-
-      {narrative && (
-        <NarrativePanel
-          kicker="The story in the data"
-          headline={narrative.headline}
-          points={narrative.points}
-          takeaway={narrative.takeaway}
+    <div style={{ minHeight: "100vh", background: atlas.bg }}>
+      <div className="max-w-7xl mx-auto px-6 py-8" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
+        <PageHeader
+          title="Diseases & Pathogens"
+          subtitle={
+            overview ? (
+              <>
+                {overview.totalDiseases} diseases and pathogens detected in ticks across {overview.totalCountries} countries &middot;{" "}
+                <span style={{ fontFamily: "monospace" }}>{overview.totalRecords.toLocaleString()}</span> detections
+              </>
+            ) : "Loading disease data..."
+          }
         />
-      )}
 
-      <div className="flex items-center gap-4 flex-wrap px-5 py-4 mb-6" style={{ background: "#FFFFFF", border: "1px solid #E2E5DE" }}>
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#A8A29E" }}>Select Disease</span>
-          <select
-            value={selected}
-            onChange={(e) => setSelected(e.target.value)}
-            className="text-sm border px-3 py-1.5 outline-none"
-            style={{ borderColor: "#E2E5DE", color: "#1C1917", background: "#F0F5F1", minWidth: 340 }}
-          >
-            <option value="">All diseases (overview)</option>
-            {diseases.map((d) => (
-              <option key={d.name} value={d.name}>{d.name}</option>
-            ))}
-          </select>
-        </div>
-        {selected && (
-          <span className="text-xs font-medium" style={{ color: "#D97706" }}>
-            {selectedLoading
-              ? "Loading records..."
-              : `${selectedData?.total.toLocaleString() || 0} records &middot; ${selectedData?.uniqueVectors || 0} vectors &middot; ${selectedData?.uniqueHosts || 0} hosts &middot; ${selectedData?.uniqueCountries || 0} countries`}
-          </span>
+        {narrative && (
+          <NarrativePanel
+            kicker="The story in the data"
+            headline={narrative.headline}
+            points={narrative.points}
+            takeaway={narrative.takeaway}
+          />
         )}
-      </div>
 
-      {!selected && overview && (
-        <>
-          <div className="grid grid-cols-3 gap-px mb-6" style={{ background: "#E2E5DE" }}>
-            {[
-              { label: "Total Diseases", value: overview.totalDiseases },
-              { label: "Total Records", value: overview.totalRecords },
-              { label: "Countries", value: overview.totalCountries },
-            ].map((s) => (
-              <div key={s.label} className="px-5 py-4" style={{ background: "#FFFFFF" }}>
-                <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#A8A29E" }}>{s.label}</div>
-                <div className="text-3xl font-semibold mt-1" style={{ color: "#1C1917", fontFamily: "monospace" }}>{s.value.toLocaleString()}</div>
-              </div>
-            ))}
-          </div>
+        <FilterBar>
+          <FilterGroup label="Disease">
+            <Select value={selected} onChange={setSelected} minWidth={340}>
+              <option value="">All diseases (overview)</option>
+              {diseases.map((d) => (
+                <option key={d.name} value={d.name}>{d.name}</option>
+              ))}
+            </Select>
+          </FilterGroup>
+          {selected && (
+            <Chip tone="amber">
+              {selectedLoading
+                ? "Loading records..."
+                : `${selectedData?.total.toLocaleString() || 0} records · ${selectedData?.uniqueVectors || 0} vectors · ${selectedData?.uniqueHosts || 0} hosts · ${selectedData?.uniqueCountries || 0} countries`}
+            </Chip>
+          )}
+        </FilterBar>
 
-          <div style={{ background: "#FFFFFF", border: "1px solid #E2E5DE" }}>
-            <div className="px-5 py-3 border-b" style={{ borderColor: "#E2E5DE" }}>
-              <h3 className="text-sm font-semibold" style={{ color: "#1C1917" }}>Top 15 Diseases by Record Count</h3>
-            </div>
-            <div className="p-3">
-              <ResponsiveContainer width="100%" height={480}>
+        {!selected && overview && (
+          <>
+            <StatCards
+              className="grid-cols-1 sm:grid-cols-3"
+              items={[
+                { label: "Total Diseases", value: overview.totalDiseases, hint: "pathogens & disease agents detected" },
+                { label: "Total Detections", value: overview.totalRecords, hint: "epidemiological records" },
+                { label: "Countries", value: overview.totalCountries, hint: "across the African continent" },
+              ]}
+            />
+
+            <Panel title="Top 15 Diseases & Pathogens by Record Count" className="mb-6">
+              <ResponsiveContainer width="100%" height={500}>
                 <BarChart data={overview.top15} layout="vertical" margin={{ left: 10, right: 30 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#EBEDE9" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 12, fill: "#A8A29E", fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: "#E2E5DE" }} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "#1C1917" }} tickLine={false} axisLine={false} width={300} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={atlas.grid} horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: atlas.textMuted, fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: atlas.border }} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: atlas.text }} tickLine={false} axisLine={false} width={300} />
                   <Tooltip
-                    contentStyle={{ borderRadius: 2, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }}
+                    contentStyle={tooltipStyle}
                     formatter={(value: number, _name: string, item: any) => {
                       const datum = item?.payload;
                       const match = overview.top15.find((d) => d.name === datum?.name);
                       return [`${value.toLocaleString()} records (${match?.pct || 0}%)`, datum?.fullName || datum?.name || "Disease"];
                     }}
                   />
-                  <Bar dataKey="count" fill="#DC2626" radius={[0, 3, 3, 0]} cursor="pointer" onClick={(data: any) => data?.fullName && navigate(`/diseases/${encodeURIComponent(data.fullName)}`)} />
+                  <Bar dataKey="count" fill={atlas.red} radius={[0, 4, 4, 0]} cursor="pointer" onClick={(data: any) => data?.fullName && navigate(`/diseases/${encodeURIComponent(data.fullName)}`)} />
                 </BarChart>
               </ResponsiveContainer>
-            </div>
-          </div>
-        </>
-      )}
+            </Panel>
+          </>
+        )}
 
-      {selected && (
-        selectedLoading ? (
-          <div className="flex items-center justify-center min-h-[40vh]">
-            <span className="text-sm" style={{ color: "#A8A29E" }}>Loading records...</span>
-          </div>
-        ) : selectedData ? (
-          <>
-            <div className="grid grid-cols-4 gap-px mb-6" style={{ background: "#E2E5DE" }}>
-              {[
-                { label: "Records", value: selectedData.total },
-                { label: "Tick Vectors", value: selectedData.uniqueVectors },
-                { label: "Hosts", value: selectedData.uniqueHosts },
-                { label: "Countries", value: selectedData.uniqueCountries },
-              ].map((s) => (
-                <div key={s.label} className="px-5 py-4" style={{ background: "#FFFFFF" }}>
-                  <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#A8A29E" }}>{s.label}</div>
-                  <div className="text-3xl font-semibold mt-1" style={{ color: "#1C1917", fontFamily: "monospace" }}>{s.value.toLocaleString()}</div>
-                </div>
-              ))}
-            </div>
+        {selected && (
+          selectedLoading ? (
+            <PageLoader />
+          ) : selectedData ? (
+            <>
+              <StatCards
+                className="grid-cols-2 lg:grid-cols-4"
+                items={[
+                  { label: "Records", value: selectedData.total },
+                  { label: "Tick Vectors", value: selectedData.uniqueVectors },
+                  { label: "Hosts", value: selectedData.uniqueHosts },
+                  { label: "Countries", value: selectedData.uniqueCountries },
+                ]}
+              />
 
-            <div className="grid grid-cols-2 gap-px mb-6" style={{ background: "#E2E5DE" }}>
-              <div style={{ background: "#FFFFFF" }}>
-                <div className="px-5 py-3 border-b" style={{ borderColor: "#E2E5DE" }}>
-                  <h3 className="text-sm font-semibold" style={{ color: "#1C1917" }}>Tick Vectors</h3>
-                </div>
-                <div className="p-3">
-                  <ResponsiveContainer width="100%" height={Math.max(200, selectedData.species.length * 36)}>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                <Panel title="Tick Vectors">
+                  <ResponsiveContainer width="100%" height={Math.max(220, selectedData.species.length * 34)}>
                     <BarChart data={selectedData.species} layout="vertical" margin={{ left: 10, right: 30 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#EBEDE9" horizontal={false} />
-                      <XAxis type="number" tick={{ fontSize: 12, fill: "#A8A29E", fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: "#E2E5DE" }} />
-                      <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "#1C1917" }} tickLine={false} axisLine={false} width={200} />
-                      <Tooltip contentStyle={{ borderRadius: 2, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }} />
-                      <Bar dataKey="count" fill="#DC2626" radius={[0, 3, 3, 0]} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={atlas.grid} horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 11, fill: atlas.textMuted, fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: atlas.border }} />
+                      <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: atlas.text }} tickLine={false} axisLine={false} width={200} />
+                      <Tooltip contentStyle={tooltipStyle} />
+                      <Bar dataKey="count" fill={atlas.red} radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
-              </div>
-              <div style={{ background: "#FFFFFF" }}>
-                <div className="px-5 py-3 border-b" style={{ borderColor: "#E2E5DE" }}>
-                  <h3 className="text-sm font-semibold" style={{ color: "#1C1917" }}>Countries</h3>
-                </div>
-                <div className="p-3">
-                  <ResponsiveContainer width="100%" height={Math.max(200, selectedData.countries.length * 36)}>
+                </Panel>
+                <Panel title="Countries">
+                  <ResponsiveContainer width="100%" height={Math.max(220, selectedData.countries.length * 34)}>
                     <BarChart data={selectedData.countries} layout="vertical" margin={{ left: 10, right: 30 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#EBEDE9" horizontal={false} />
-                      <XAxis type="number" tick={{ fontSize: 12, fill: "#A8A29E", fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: "#E2E5DE" }} />
-                      <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "#1C1917" }} tickLine={false} axisLine={false} width={120} />
-                      <Tooltip contentStyle={{ borderRadius: 2, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }} />
-                      <Bar dataKey="count" fill="#134E4A" radius={[0, 3, 3, 0]} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={atlas.grid} horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 11, fill: atlas.textMuted, fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: atlas.border }} />
+                      <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: atlas.text }} tickLine={false} axisLine={false} width={130} />
+                      <Tooltip contentStyle={tooltipStyle} />
+                      <Bar dataKey="count" fill={atlas.teal} radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
+                </Panel>
               </div>
-            </div>
 
-            <div style={{ background: "#FFFFFF", border: "1px solid #E2E5DE" }}>
-              <div className="px-5 py-3 border-b" style={{ borderColor: "#E2E5DE" }}>
-                <h3 className="text-sm font-semibold" style={{ color: "#1C1917" }}>Animal Hosts</h3>
-              </div>
-              <div className="p-3">
-                <ResponsiveContainer width="100%" height={Math.max(200, selectedData.hosts.length * 36)}>
+              <Panel title="Animal Hosts">
+                <ResponsiveContainer width="100%" height={Math.max(220, selectedData.hosts.length * 34)}>
                   <BarChart data={selectedData.hosts} layout="vertical" margin={{ left: 10, right: 30 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#EBEDE9" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 12, fill: "#A8A29E", fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: "#E2E5DE" }} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "#1C1917" }} tickLine={false} axisLine={false} width={200} />
-                    <Tooltip contentStyle={{ borderRadius: 2, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }} />
-                    <Bar dataKey="count" fill="#D97706" radius={[0, 3, 3, 0]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={atlas.grid} horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 11, fill: atlas.textMuted, fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: atlas.border }} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: atlas.text }} tickLine={false} axisLine={false} width={200} />
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Bar dataKey="count" fill={atlas.amber} radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex items-center justify-center min-h-[30vh]">
-            <span className="text-sm" style={{ color: "#A8A29E" }}>No records found for this disease.</span>
-          </div>
-        )
-      )}
+              </Panel>
+            </>
+          ) : (
+            <Panel>
+              <p className="text-[13px] py-6 text-center" style={{ color: atlas.textMuted }}>No records found for this disease.</p>
+            </Panel>
+          )
+        )}
+
+        <SourceNote />
+      </div>
     </div>
   );
 }

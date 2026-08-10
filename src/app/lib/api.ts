@@ -104,11 +104,17 @@ async function loadStatic<T>(url: string, cache: { value: T | null }): Promise<T
   return cache.value;
 }
 
+const exactFields: Record<string, string> = {
+  species: "species",
+  country: "country",
+  host: "relatedHosts",
+  disease: "epidemiologicalDisease",
+};
+
 function filterStatic<T extends Record<string, any>>(data: PaginatedResponse<T>, params: Record<string, any>): PaginatedResponse<T> {
   let rows = data.data;
-  const exact = ["species", "country", "host", "disease"] as const;
-  for (const k of exact) {
-    if (params[k]) rows = rows.filter((r) => r[k] === params[k]);
+  for (const [param, field] of Object.entries(exactFields)) {
+    if (params[param]) rows = rows.filter((r) => r[field] === params[param]);
   }
   if (params.search) {
     const q = params.search.toLowerCase();
