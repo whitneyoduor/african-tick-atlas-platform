@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { fetchEpidemiological, fetchEpidemiologicalMeta, type EpidemiologicalRecord, type EpidemiologicalMeta } from "../../lib/api";
+import { NarrativePanel } from "../common/NarrativePanel";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export function DiseaseList() {
@@ -38,6 +39,56 @@ export function DiseaseList() {
   }, [selected]);
 
   const diseases = useMemo(() => (meta?.diseases || []).filter((d) => d && d.name), [meta]);
+
+  const diseaseFact: Record<string, string> = {
+    "rickettsia spp.": "spotted-fever group rickettsiae, including the agent of African tick-bite fever (Rickettsia africae)",
+    "rickettsia africae": "the agent of African tick-bite fever, the most common tick-borne disease among travellers to Africa",
+    "coxiella burnetii": "the agent of Q fever, a significant livestock zoonosis",
+    "ehrlichia ruminantium": "the agent of heartwater, among the most damaging livestock diseases in sub-Saharan Africa",
+    "anaplasma marginale": "the agent of bovine anaplasmosis, a major constraint on cattle production",
+    "babesia bigemina": "the agent of redwater fever in cattle",
+    "theileria parva": "the agent of East Coast fever, the single most important tick-borne disease of cattle in Africa",
+    "crimean-congo haemorrhagic fever": "a severe zoonotic viral disease transmitted primarily by Hyalomma ticks",
+    "east coast fever": "caused by Theileria parva, the leading cause of tick-borne cattle mortality in East Africa",
+  };
+
+  const narrative = useMemo(() => {
+    if (!meta || meta.diseases.length === 0) return null;
+    const total = meta.totalRecords;
+    const raw = meta.diseases.slice().sort((a, b) => b.count - a.count);
+    const top3 = raw.slice(0, 3);
+    const top3Count = top3.reduce((s, x) => s + x.count, 0);
+    const pctTop3 = total > 0 ? Math.round((top3Count / total) * 100) : 0;
+
+    const top = raw[0];
+    const topPct = total > 0 ? Math.round((top.count / total) * 100) : 0;
+    const fact = diseaseFact[top.name.toLowerCase()];
+
+    const points = [
+      {
+        title: "Concentration",
+        text: `The top three pathogens account for ${pctTop3}% of all ${total.toLocaleString()} detections, and the most-detected, ${top.name}, alone represents ${topPct}%${fact ? ` — ${fact}` : ""}.`,
+      },
+      {
+        title: "The livestock burden",
+        text: `East Coast fever (Theileria parva), heartwater (Ehrlichia ruminantium), anaplasmosis and babesiosis all feature in the dataset — together these four diseases are the main tick-borne threat to cattle production across sub-Saharan Africa.`,
+      },
+      {
+        title: "The zoonotic layer",
+        text: `Beyond livestock, the data captures Crimean-Congo haemorrhagic fever, Q fever (Coxiella burnetii) and rickettsial infections — pathogens that spill from ticks and livestock into human communities.`,
+      },
+      {
+        title: "Geographic reach",
+        text: `These detections span ${meta.countries.length} African countries, mapping the continental footprint of tick-borne disease risk.`,
+      },
+    ];
+
+    return {
+      headline: "Livestock pathogens drive the record, but the zoonotic signals are what make African tick-borne disease a One Health concern.",
+      points,
+      takeaway: "The distribution of detections mirrors real burden: bacterial agents of livestock disease dominate screening effort, while viral and rickettsial zoonoses (CCHF, Q fever, African tick-bite fever) represent the main risk to human health.",
+    };
+  }, [meta]);
 
   const overview = useMemo(() => {
     if (!meta) return null;
@@ -89,6 +140,15 @@ export function DiseaseList() {
           {overview ? `${overview.totalDiseases} diseases and pathogens detected in ticks across ${overview.totalCountries} countries &middot; ${overview.totalRecords.toLocaleString()} total records` : "Loading disease data..."}
         </p>
       </div>
+
+      {narrative && (
+        <NarrativePanel
+          kicker="The story in the data"
+          headline={narrative.headline}
+          points={narrative.points}
+          takeaway={narrative.takeaway}
+        />
+      )}
 
       <div className="flex items-center gap-4 flex-wrap px-5 py-4 mb-6" style={{ background: "#FFFFFF", border: "1px solid #E2E5DE" }}>
         <div className="flex items-center gap-3">
