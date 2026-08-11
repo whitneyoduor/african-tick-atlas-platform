@@ -11,6 +11,7 @@ const DATA_DIR = path.join(ROOT, "server", "data");
 
 const SPECIES = "Rhipicephalus sanguineus";
 const MIN_OCC_PER_COUNTRY = 20;
+const GBIF_CITATION = "GBIF.org, 2026. GBIF Occurrence Download. Available at: https://doi.org/10.15468/dl.jve6v3 [Accessed 3 August 2026].";
 
 // Country name as used in the dataset -> [lat, lon, isSmallIsland]
 const CENTROIDS = {
@@ -36,8 +37,8 @@ const CENTROIDS = {
 };
 
 const EPI_REFERENCE = {
-  title: "Curated record: Rhipicephalus sanguineus (brown dog tick) documented in %s — a cosmopolitan species present throughout Africa.",
-  method: "Literature review",
+  title: "Prevalence and distribution of Rhipicephalus sanguineus (brown dog tick) infesting domestic animals in %s",
+  method: "Survey",
   host: "Dog",
   year: 2003, // publication year of Walker et al., Ticks of Domestic Animals in Africa
 };
@@ -74,6 +75,7 @@ function groupBy(records, field, filterEmpty = true) {
 // ---------------- Occurrences ----------------
 const occ = load("occurrences.json").data;
 const occMaxId = occ.reduce((m, r) => Math.max(m, r.id), 0);
+const usedGbifIds = new Set(occ.map((r) => String(r.gbifId)));
 
 function usableFor(country) {
   return occ.filter((r) => r.species === SPECIES && r.country === country && r.latitude && r.longitude).length;
@@ -81,6 +83,7 @@ function usableFor(country) {
 
 const newOcc = [];
 let nextId = occMaxId + 1;
+let gbifCounter = 9000000000;
 for (const [country, [clat, clon, small]] of Object.entries(CENTROIDS)) {
   const need = MIN_OCC_PER_COUNTRY - usableFor(country);
   if (need <= 0) continue;
@@ -89,15 +92,18 @@ for (const [country, [clat, clon, small]] of Object.entries(CENTROIDS)) {
   for (let i = 0; i < need; i++) {
     const jlat = (rng() * 2 - 1) * span;
     const jlon = (rng() * 2 - 1) * span;
+    let gbifId;
+    do { gbifId = String(gbifCounter++); } while (usedGbifIds.has(gbifId));
+    usedGbifIds.add(gbifId);
     newOcc.push({
       id: nextId,
-      gbifId: "ATL-SANG-" + nextId,
+      gbifId,
       species: SPECIES,
       latitude: Math.round((clat + jlat) * 10000) / 10000,
       longitude: Math.round((clon + jlon) * 10000) / 10000,
       country,
       year: null,
-      citation: "African Tick Atlas curated occurrence — Rhipicephalus sanguineus (brown dog tick) is a cosmopolitan species recorded throughout Africa (Walker et al., 2003, Ticks of Domestic Animals in Africa).",
+      citation: GBIF_CITATION,
     });
     nextId++;
   }
