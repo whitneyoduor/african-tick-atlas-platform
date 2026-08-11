@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { fetchEpidemiological, fetchOccurrences, exportAsCSV, exportAsGeoJSON } from "../../lib/api";
+import { fetchEpidemiological, exportAsCSV } from "../../lib/api";
 
 export function Downloads() {
   const [loading, setLoading] = useState(false);
@@ -27,11 +27,23 @@ export function Downloads() {
         setRecordCount(records.length);
         exportAsCSV(records);
       } else {
-        const res = await fetchOccurrences({ limit: 200000, signal: controller.signal });
+        const res = await fetch("/tick_occurrences.geojson", { signal: controller.signal });
         if (controller.signal.aborted) return;
-        const records = res.data;
-        setRecordCount(records.length);
-        exportAsGeoJSON(records);
+        if (!res.ok) throw new Error("Failed to fetch occurrence data");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "tick_occurrences.geojson";
+        a.click();
+        URL.revokeObjectURL(url);
+        try {
+          const meta = await fetch("/tick_occurrences.meta.json", { signal: controller.signal });
+          if (meta.ok) {
+            const m = await meta.json();
+            setRecordCount(m.features);
+          }
+        } catch { /* count display is optional */ }
       }
       setSuccess(true);
     } catch (e: any) {

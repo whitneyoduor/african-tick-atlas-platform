@@ -453,7 +453,6 @@ for (const [species, localities] of Object.entries(LOCALITIES)) {
       longitude: lon,
       country,
       year: null,
-      citation: GBIF_CITATION,
     });
     nextId++;
   }

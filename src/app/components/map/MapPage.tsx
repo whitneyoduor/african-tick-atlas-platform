@@ -1,14 +1,11 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { TickMap } from "./TickMap";
 import {
-  fetchOccurrenceMeta,
-  fetchOccurrences,
+  fetchMapPoints,
   fetchEpidemiologicalMeta,
-  fetchEpidemiologicalSpeciesDetail,
-  type Occurrence,
-  type OccurrenceMeta,
+  type MapPoint,
+  type MapPointsData,
   type EpidemiologicalMeta,
-  type SpeciesDetailMap,
 } from "../../lib/api";
 import { KEY_SPECIES, prioritizeSpecies } from "../../lib/species";
 
@@ -108,54 +105,40 @@ function SearchableSelect({ value, options, placeholder, label, onChange }: {
 export function MapPage() {
   const [activeLayer, setActiveLayer] = useState<Layer>("occurrence");
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [meta, setMeta] = useState<OccurrenceMeta | null>(null);
+  const [mapData, setMapData] = useState<MapPointsData | null>(null);
   const [epiMeta, setEpiMeta] = useState<EpidemiologicalMeta | null>(null);
-  const [speciesMap, setSpeciesMap] = useState<SpeciesDetailMap>({});
-  const [allRecords, setAllRecords] = useState<Occurrence[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const ctrl = new AbortController();
     Promise.all([
-      fetchOccurrenceMeta(ctrl.signal),
-      fetchOccurrences({ limit: 200000, signal: ctrl.signal }),
+      fetchMapPoints(),
       fetchEpidemiologicalMeta(ctrl.signal),
-      fetchEpidemiologicalSpeciesDetail(ctrl.signal),
     ])
-      .then(([m, r, em, sm]) => {
-        setMeta(m);
-        setAllRecords(r.data);
+      .then(([m, em]) => {
+        setMapData(m);
         setEpiMeta(em);
-        setSpeciesMap(sm);
         setLoading(false);
       })
       .catch(() => { setLoading(false); });
     return () => ctrl.abort();
   }, []);
 
-  const filteredRecords = useMemo(() => {
+  const filteredPoints = useMemo(() => {
+    if (!mapData) return [];
     const hasFilters = Object.values(filters).some(Boolean);
-    if (!hasFilters) return allRecords;
-    return allRecords.filter((rec) => {
-      if (filters.species && (rec.species || "") !== filters.species) return false;
-      if (filters.country && (rec.country || "") !== filters.country) return false;
-      if (filters.yearFrom && (rec.year ?? Number.MAX_SAFE_INTEGER) < Number(filters.yearFrom)) return false;
-      if (filters.yearTo && (rec.year ?? Number.MIN_SAFE_INTEGER) > Number(filters.yearTo)) return false;
-      const attrs = speciesMap[(rec.species || "").trim().toLowerCase()];
-      if (filters.host && attrs?.host !== filters.host) return false;
-      if (filters.disease && attrs?.disease !== filters.disease) return false;
-      if (filters.method && attrs?.method !== filters.method) return false;
+    if (!hasFilters) return mapData.points;
+    return mapData.points.filter((p) => {
+      if (filters.species && p.species !== filters.species) return false;
+      if (filters.country && p.country !== filters.country) return false;
+      if (filters.yearFrom && (p.year ?? Number.MAX_SAFE_INTEGER) < Number(filters.yearFrom)) return false;
+      if (filters.yearTo && (p.year ?? Number.MIN_SAFE_INTEGER) > Number(filters.yearTo)) return false;
+      if (filters.host && p.host !== filters.host) return false;
+      if (filters.disease && p.disease !== filters.disease) return false;
+      if (filters.method && p.method !== filters.method) return false;
       return true;
     });
-  }, [allRecords, speciesMap, filters]);
-
-  const methods = useMemo(() => {
-    const s = new Set<string>();
-    for (const a of Object.values(speciesMap)) {
-      if (a.method) s.add(a.method);
-    }
-    return Array.from(s).sort();
-  }, [speciesMap]);
+  }, [mapData, filters]);
 
   const diseases = useMemo(
     () => (epiMeta?.diseases || []).filter((d) => d.name && d.name.toLowerCase() !== "none"),
@@ -167,15 +150,15 @@ export function MapPage() {
     [epiMeta]
   );
 
-  const speciesOptions = useMemo(() => prioritizeSpecies(meta?.species || []), [meta]);
+  const speciesOptions = useMemo(() => prioritizeSpecies(mapData?.species || []), [mapData]);
 
   const yearRange = useMemo(() => {
-    if (!meta) return { min: "", max: "" };
+    if (!mapData) return { min: "", max: "" };
     return {
-      min: meta.yearRange.min ? String(meta.yearRange.min) : "",
-      max: meta.yearRange.max ? String(meta.yearRange.max) : "",
+      min: mapData.yearRange.min ? String(mapData.yearRange.min) : "",
+      max: mapData.yearRange.max ? String(mapData.yearRange.max) : "",
     };
-  }, [meta]);
+  }, [mapData]);
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
@@ -199,6 +182,8 @@ export function MapPage() {
       <div className="animate-spin rounded-full h-5 w-5 border-2" style={{ borderColor: "var(--border)", borderTopColor: "var(--accent-teal)" }} />
     </div>
   );
+
+  const totalPoints = mapData?.points.length || 0;
 
   return (
     <div className="flex h-[calc(100vh-120px)]">
@@ -228,7 +213,7 @@ export function MapPage() {
 
       {/* Center - Map */}
       <div className="flex-1 relative">
-        <TickMap activeLayer={activeLayer} records={filteredRecords} speciesMap={speciesMap} />
+        <TickMap activeLayer={activeLayer} points={filteredPoints} />
 
         <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
           <SearchableSelect
@@ -250,7 +235,7 @@ export function MapPage() {
             style={{ borderColor: "var(--border)", background: "var(--card-bg)", color: "var(--text-primary)" }}
           >
             <option value="">All Countries</option>
-            {meta?.countries.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
+            {mapData?.countries.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
           </select>
           <select
             value={filters.yearFrom}
@@ -290,7 +275,7 @@ export function MapPage() {
 
         {/* Result count */}
         <div className="absolute bottom-3 left-3 text-[11px] px-2.5 py-1 rounded" style={{ background: "var(--card-bg)", border: "1px solid var(--border)", color: "var(--text-muted)" }}>
-          {filteredRecords.length.toLocaleString()} of {meta?.totalRecords.toLocaleString() || allRecords.length.toLocaleString()} records
+          {filteredPoints.length.toLocaleString()} of {totalPoints.toLocaleString()} records
         </div>
 
         {activeLayer === "disease" && (
@@ -362,8 +347,8 @@ export function MapPage() {
               className="w-full text-xs border rounded px-3 py-2"
               style={{ borderColor: "var(--border)", background: "var(--card-bg)", color: "var(--text-primary)" }}
             >
-              <option value="">All countries ({meta?.countries.length || 0})</option>
-              {meta?.countries.map((c) => <option key={c.name} value={c.name}>{c.name} ({c.count})</option>)}
+              <option value="">All countries ({mapData?.countries.length || 0})</option>
+              {mapData?.countries.map((c) => <option key={c.name} value={c.name}>{c.name} ({c.count})</option>)}
             </select>
           </div>
 
@@ -388,8 +373,8 @@ export function MapPage() {
               className="w-full text-xs border rounded px-3 py-2"
               style={{ borderColor: "var(--border)", background: "var(--card-bg)", color: "var(--text-primary)" }}
             >
-              <option value="">All methods ({methods.length})</option>
-              {methods.map((m) => <option key={m} value={m}>{m}</option>)}
+              <option value="">All methods ({mapData?.methods.length || 0})</option>
+              {mapData?.methods.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
           </div>
 

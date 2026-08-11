@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { fetchOccurrences, type Occurrence } from "../../lib/api";
-import { isOnLand } from "../../../lib/land-filter";
+import { fetchMapPoints, type MapPoint } from "../../lib/api";
 
 interface LayerMeta {
   label: string;
@@ -78,7 +77,7 @@ export function EnvironmentalLayers() {
   const [showTicks, setShowTicks] = useState(false);
   const [rSangOnly, setRSangOnly] = useState(true);
   const [layerMeta, setLayerMeta] = useState<Record<string, LayerMeta> | null>(null);
-  const [records, setRecords] = useState<Occurrence[]>([]);
+  const [points, setPoints] = useState<MapPoint[]>([]);
   const [cursorVal, setCursorVal] = useState<{ x: number; y: number; value: string } | null>(null);
 
   const metaRef = useRef<Record<string, LayerMeta> | null>(null);
@@ -89,10 +88,10 @@ export function EnvironmentalLayers() {
   useEffect(() => {
     Promise.all([
       fetch("/environmental/layers.json").then((r) => r.json()).catch(() => null),
-      fetchOccurrences({ limit: 200000 }).catch(() => ({ data: [] })),
+      fetchMapPoints().catch(() => ({ points: [] })),
     ]).then(([meta, res]) => {
       setLayerMeta(meta);
-      setRecords(res.data);
+      setPoints(res.points);
       setLoading(false);
     });
   }, []);
@@ -219,26 +218,24 @@ export function EnvironmentalLayers() {
     function addTicks() {
       safeRemove(m, "tick-points", "tick-overlay");
 
-      if (!showTicks || records.length === 0) return;
+      if (!showTicks || points.length === 0) return;
 
       const filtered = rSangOnly
-        ? records.filter((r) => {
+        ? points.filter((r) => {
             const sp = (r.species || "").toLowerCase();
             return sp.includes("rhipicephalus") && sp.includes("sanguineus");
           })
-        : records;
+        : points;
 
-      const features: GeoJSON.Feature[] = filtered
-        .filter((r) => r.latitude != null && r.longitude != null && isOnLand(r.latitude, r.longitude))
-        .map((r) => ({
-          type: "Feature",
-          geometry: { type: "Point", coordinates: [r.longitude!, r.latitude!] },
-          properties: {
-            sp: r.species || "Unknown",
-            yr: r.year != null ? String(r.year) : "Unknown",
-            co: r.country || "Unknown",
-          },
-        }));
+      const features: GeoJSON.Feature[] = filtered.map((r) => ({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [r.lng, r.lat] },
+        properties: {
+          sp: r.species || "Unknown",
+          yr: r.year != null ? String(r.year) : "Unknown",
+          co: r.country || "Unknown",
+        },
+      }));
 
       m.addSource("tick-overlay", {
         type: "geojson",
@@ -295,7 +292,7 @@ export function EnvironmentalLayers() {
       cleanup?.();
       safeRemove(m, "tick-points", "tick-overlay");
     };
-  }, [showTicks, rSangOnly, records]);
+  }, [showTicks, rSangOnly, points]);
 
   if (loading) {
     return (
@@ -306,7 +303,7 @@ export function EnvironmentalLayers() {
   }
 
   const activeMeta = layerMeta?.[activeLayer];
-  const rSangCount = records.filter((r) => {
+  const rSangCount = points.filter((r) => {
     const sp = (r.species || "").toLowerCase();
     return sp.includes("rhipicephalus") && sp.includes("sanguineus");
   }).length;
@@ -409,7 +406,7 @@ export function EnvironmentalLayers() {
                   <input type="radio" name="tick-filter" checked={!rSangOnly} onChange={() => setRSangOnly(false)} className="w-3 h-3 accent-[#4F46E5]" />
                   <span className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
                     All species
-                    <span className="ml-1 text-[10px]" style={{ color: "var(--text-muted)" }}>({records.length})</span>
+                    <span className="ml-1 text-[10px]" style={{ color: "var(--text-muted)" }}>({points.length})</span>
                   </span>
                 </label>
               </div>

@@ -153,9 +153,11 @@ save("occurrences-meta.json", {
 });
 
 // ---- rebuild Excel from cleaned JSON ----
+const CITATION =
+  "GBIF.org, 2026. GBIF Occurrence Download. Available at: https://doi.org/10.15468/dl.jve6v3 [Accessed 3 August 2026].";
 const occRows = kept.map((r) => ({
   Species: r.species, Latitude: r.latitude, Longitude: r.longitude,
-  Country: r.country, Year: r.year, "GBIF occurrence ID": r.gbifId, Citation: r.citation,
+  Country: r.country, Year: r.year, "GBIF occurrence ID": r.gbifId, Citation: CITATION,
 }));
 const occWs = XLSX.utils.json_to_sheet(occRows);
 const occWb = XLSX.utils.book_new();

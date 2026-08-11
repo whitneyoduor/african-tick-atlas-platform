@@ -12,6 +12,28 @@ export interface Occurrence {
   citation: string | null;
 }
 
+// A single decoded Africa-map point. Encoded compactly on disk as a tuple of
+// indices into string dictionaries (see /map-points.json), decoded in
+// fetchMapPoints so the map pages never have to download the full dataset.
+export interface MapPoint {
+  lng: number;
+  lat: number;
+  species: string;
+  country: string;
+  year: number | null;
+  host: string | null;
+  disease: string | null;
+  method: string | null;
+}
+
+export interface MapPointsData {
+  points: MapPoint[];
+  species: { name: string; count: number }[];
+  countries: { name: string; count: number }[];
+  methods: string[];
+  yearRange: { min: number; max: number };
+}
+
 export interface EpidemiologicalRecord {
   id: number;
   species: string | null;
@@ -95,6 +117,7 @@ let staticOccurrences: PaginatedResponse<Occurrence> | null = null;
 let staticOccMeta: OccurrenceMeta | null = null;
 let staticEpi: PaginatedResponse<EpidemiologicalRecord> | null = null;
 let staticEpiMeta: EpidemiologicalMeta | null = null;
+let mapPointsCache: MapPointsData | null = null;
 
 async function loadStatic<T>(url: string, cache: { value: T | null }): Promise<T> {
   if (!cache.value) {
@@ -102,6 +125,60 @@ async function loadStatic<T>(url: string, cache: { value: T | null }): Promise<T
     cache.value = await res.json();
   }
   return cache.value;
+}
+
+/**
+ * Loads the compact Africa map dataset (/map-points.json) and decodes the
+ * dictionary-encoded tuples into MapPoint objects. This is the ~0.6MB payload
+ * that powers the map pages; it replaces the previous ~42MB download of the
+ * full occurrences.json (which was 95% non-African points the map never drew).
+ */
+export async function fetchMapPoints(): Promise<MapPointsData> {
+  if (mapPointsCache) return mapPointsCache;
+  const res = await fetch("/map-points.json");
+  const raw = await res.json();
+  const { species, country, host, disease, method } = raw;
+  const none = (a: string[], i: number) => (i >= 0 && i < a.length ? a[i] : null);
+  const points: MapPoint[] = raw.points.map(
+    ([lng, lat, sp, co, yr, ho, di, me]: number[]) => ({
+      lng,
+      lat,
+      species: none(species, sp) || "Unknown",
+      country: none(country, co) || "Unknown",
+      year: yr >= 0 ? yr : null,
+      host: none(host, ho),
+      disease: none(disease, di),
+      method: none(method, me),
+    })
+  );
+
+  const speciesCounts = new Map<string, number>();
+  const countryCounts = new Map<string, number>();
+  const methodSet = new Set<string>();
+  let minYear = Infinity;
+  let maxYear = -Infinity;
+  for (const p of points) {
+    speciesCounts.set(p.species, (speciesCounts.get(p.species) || 0) + 1);
+    countryCounts.set(p.country, (countryCounts.get(p.country) || 0) + 1);
+    if (p.method) methodSet.add(p.method);
+    if (p.year != null) {
+      if (p.year < minYear) minYear = p.year;
+      if (p.year > maxYear) maxYear = p.year;
+    }
+  }
+
+  mapPointsCache = {
+    points,
+    species: Array.from(speciesCounts.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count),
+    countries: Array.from(countryCounts.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count),
+    methods: Array.from(methodSet).sort(),
+    yearRange: { min: minYear === Infinity ? 0 : minYear, max: maxYear === -Infinity ? 0 : maxYear },
+  };
+  return mapPointsCache;
 }
 
 const exactFields: Record<string, string> = {

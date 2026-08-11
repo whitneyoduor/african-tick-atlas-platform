@@ -1,8 +1,7 @@
 import { useEffect, useRef, useMemo } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { type Occurrence, type SpeciesDetailMap } from "../../lib/api";
-import { isOnLand } from "../../../lib/land-filter";
+import { type MapPoint } from "../../lib/api";
 
 const AFRICA_BBOX = [-25, -40, 55, 40];
 
@@ -10,23 +9,20 @@ type Layer = "occurrence" | "richness" | "hosts" | "disease" | "prevalence" | "d
 
 interface TickMapProps {
   activeLayer: Layer;
-  records: Occurrence[];
-  speciesMap: SpeciesDetailMap;
+  points: MapPoint[];
 }
 
-export function TickMap({ activeLayer, records, speciesMap }: TickMapProps) {
+export function TickMap({ activeLayer, points }: TickMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const mapObj = useRef<maplibregl.Map | null>(null);
   const ready = useRef(false);
-  const recordsRef = useRef<Occurrence[]>(records);
+  const pointsRef = useRef<MapPoint[]>(points);
   const layerRef = useRef<Layer>(activeLayer);
-  const speciesMapRef = useRef<SpeciesDetailMap>(speciesMap);
 
-  recordsRef.current = records;
+  pointsRef.current = points;
   layerRef.current = activeLayer;
-  speciesMapRef.current = speciesMap;
 
-  const geojsonData = useMemo(() => buildGeoJSON(records, speciesMap), [records, speciesMap]);
+  const geojsonData = useMemo(() => buildGeoJSON(points), [points]);
 
   useEffect(() => {
     if (!container.current || mapObj.current) return;
@@ -43,7 +39,7 @@ export function TickMap({ activeLayer, records, speciesMap }: TickMapProps) {
 
     m.on("load", () => {
       ready.current = true;
-      const data = buildGeoJSON(recordsRef.current, speciesMapRef.current);
+      const data = buildGeoJSON(pointsRef.current);
       m.addSource("ticks", { type: "geojson", data });
 
       m.addLayer({
@@ -120,27 +116,25 @@ export function TickMap({ activeLayer, records, speciesMap }: TickMapProps) {
   return <div ref={container} className="w-full h-full" />;
 }
 
-function buildGeoJSON(records: Occurrence[], speciesMap: SpeciesDetailMap): GeoJSON.FeatureCollection {
+function buildGeoJSON(points: MapPoint[]): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
-    features: records
-      .filter((r) => r.latitude != null && r.longitude != null && isOnLand(r.latitude, r.longitude))
-      .map((r) => {
-        const attrs = speciesMap[(r.species || "").trim().toLowerCase()];
-        return {
-          type: "Feature" as const,
-          geometry: { type: "Point" as const, coordinates: [r.longitude!, r.latitude!] },
-          properties: {
-            sp: r.species || "Unknown",
-            co: r.country || "Unknown",
-            yr: r.year != null ? String(r.year) : "Unknown",
-            ho: attrs?.host || "Unknown",
-            di: (attrs?.disease || "").trim().toLowerCase() || "none",
-            diDisplay: attrs?.disease || "None",
-            me: attrs?.method || "Unknown",
-          },
-        };
-      }),
+    features: points.map((r) => {
+      const di = (r.disease || "").trim().toLowerCase();
+      return {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [r.lng, r.lat] },
+        properties: {
+          sp: r.species || "Unknown",
+          co: r.country || "Unknown",
+          yr: r.year != null ? String(r.year) : "Unknown",
+          ho: r.host || "Unknown",
+          di: di || "none",
+          diDisplay: r.disease || "None",
+          me: r.method || "Unknown",
+        },
+      };
+    }),
   };
 }
 

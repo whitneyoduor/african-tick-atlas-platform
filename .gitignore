@@ -6,5 +6,6 @@ vite-start.log
 nul
 .env
 .env.local
-server/data/
+server/data/*
+!server/data/ne_50m_land.geojson
 server/prisma/*.db
