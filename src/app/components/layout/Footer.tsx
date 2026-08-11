@@ -11,7 +11,6 @@ export function Footer() {
           <div className="flex gap-4">
             <button onClick={() => navigate("/about")} style={{ color: "rgba(255,255,255,0.4)" }} className="hover:underline">About</button>
             <button onClick={() => navigate("/downloads")} style={{ color: "rgba(255,255,255,0.4)" }} className="hover:underline">Downloads</button>
-            <button onClick={() => navigate("/api")} style={{ color: "rgba(255,255,255,0.4)" }} className="hover:underline">API</button>
           </div>
         </div>
       </div>

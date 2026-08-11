@@ -10,7 +10,6 @@ const DiseaseList = lazy(() => import("./components/disease/DiseaseList").then(m
 const DiseasePage = lazy(() => import("./components/disease/DiseasePage").then(m => ({ default: m.DiseasePage })));
 const EnvironmentalLayers = lazy(() => import("./components/environmental/EnvironmentalLayers").then(m => ({ default: m.EnvironmentalLayers })));
 const Downloads = lazy(() => import("./components/downloads/Downloads").then(m => ({ default: m.Downloads })));
-const ApiExplorer = lazy(() => import("./components/api/ApiExplorer").then(m => ({ default: m.ApiExplorer })));
 const About = lazy(() => import("./components/about/About").then(m => ({ default: m.About })));
 
 function Loading() {
@@ -34,7 +33,6 @@ export default function App() {
           <Route path="diseases/:name" element={<Suspense fallback={<Loading />}><DiseasePage /></Suspense>} />
           <Route path="environmental" element={<Suspense fallback={<Loading />}><EnvironmentalLayers /></Suspense>} />
           <Route path="downloads" element={<Suspense fallback={<Loading />}><Downloads /></Suspense>} />
-          <Route path="api" element={<Suspense fallback={<Loading />}><ApiExplorer /></Suspense>} />
           <Route path="about" element={<Suspense fallback={<Loading />}><About /></Suspense>} />
           <Route path="*" element={<NotFound />} />
         </Route>

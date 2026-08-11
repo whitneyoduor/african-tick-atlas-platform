@@ -43,7 +43,7 @@ export function About() {
             The African Tick Surveillance Atlas is a continental geospatial surveillance platform for tick species,
             hosts, pathogens, and tick-borne diseases across Africa. It provides a centralized repository of
             tick occurrence data with interactive mapping, temporal trend analysis, species intelligence reports,
-            and API access for programmatic use.
+            and downloadable datasets.
           </p>
           <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
             The platform aggregates data from published literature, field surveys, and national surveillance
@@ -86,7 +86,6 @@ export function About() {
             { title: "Temporal Trends", desc: "Yearly trend analysis with brush selection and comparison" },
             { title: "Disease Portal", desc: "Comprehensive disease information with vector species" },
             { title: "Host Registry", desc: "Host species catalog with tick associations" },
-            { title: "REST API", desc: "Programmatic access with pagination, filtering, and search" },
           ].map((f) => (
             <div key={f.title}>
               <h4 className="text-sm font-semibold mb-1" style={{ color: "var(--text-primary)" }}>{f.title}</h4>
