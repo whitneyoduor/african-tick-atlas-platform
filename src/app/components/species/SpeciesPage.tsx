@@ -8,7 +8,7 @@ import {
   type GenBankMatch,
   type GenBankStats,
 } from "../../lib/api";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Treemap } from "recharts";
 import maplibregl from "maplibre-gl";
 
 const NCBI_BASE = "https://www.ncbi.nlm.nih.gov/nuccore/";
@@ -218,6 +218,62 @@ function GeneBadge({ gene }: { gene: string | null }) {
     >
       {gene}
     </span>
+  );
+}
+
+const GENBANK_HOST_COLORS = [
+  "#B45309", "#D97706", "#F59E0B", "#92400E",
+  "#FBBF24", "#78350F", "#FCD34D", "#451A03",
+];
+
+function HostTreemapContent(props: any) {
+  const { x, y, width, height, name, count, index, colors } = props;
+  if (!width || !height || width < 12 || height < 12) return null;
+  const fill = colors ? colors[index % colors.length] : "#D97706";
+  return (
+    <g>
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        fill={fill}
+        stroke="#FFFFFF"
+        strokeWidth={2}
+        rx={3}
+      />
+      {width > 55 && height > 28 && (
+        <>
+          <text
+            x={x + width / 2}
+            y={y + height / 2 - 4}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill="#FFFFFF"
+            fontSize={11}
+            fontWeight={600}
+            fontFamily="system-ui"
+          >
+            {name && name.length > Math.floor(width / 7)
+              ? name.slice(0, Math.floor(width / 7)) + "\u2026"
+              : name}
+          </text>
+          {count != null && (
+            <text
+              x={x + width / 2}
+              y={y + height / 2 + 12}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill="rgba(255,255,255,0.85)"
+              fontSize={10}
+              fontFamily="monospace"
+            >
+              {count}
+            </text>
+          )}
+        </>
+      )}
+    </g>
   );
 }
 
@@ -692,15 +748,35 @@ export function SpeciesPage() {
                       {genbankStats.hosts.length === 0 ? (
                         <p className="text-xs py-4 text-center" style={{ color: "#A8A29E" }}>No host data available</p>
                       ) : (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={genbankStats.hosts.slice(0, 8)} layout="vertical" margin={{ left: 0, right: 20, top: 5, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#EBEDE9" horizontal={false} />
-                            <XAxis type="number" tick={{ fontSize: 11, fill: "#A8A29E", fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: "#E2E5DE" }} />
-                            <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "#1C1917" }} tickLine={false} axisLine={false} width={120} />
-                            <Tooltip contentStyle={{ borderRadius: 2, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }} />
-                            <Bar dataKey="count" fill="#D97706" radius={[0, 3, 3, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
+                        <div className="flex items-center gap-3">
+                          <div style={{ width: 180, height: 180, flexShrink: 0 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <Treemap
+                                data={genbankStats.hosts.slice(0, 8)}
+                                dataKey="count"
+                                ratio={4 / 3}
+                                stroke="#FFFFFF"
+                                content={<HostTreemapContent colors={GENBANK_HOST_COLORS} />}
+                              />
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="flex-1 space-y-1.5 min-w-0">
+                            {genbankStats.hosts.slice(0, 6).map((host, i) => {
+                              const total = genbankStats.hosts.reduce((s, h) => s + h.count, 0);
+                              const pct = total > 0 ? ((host.count / total) * 100).toFixed(0) : "0";
+                              return (
+                                <div key={host.name} className="flex items-center gap-1.5 text-[11px]">
+                                  <div className="w-2 h-2 rounded-sm shrink-0" style={{ background: GENBANK_HOST_COLORS[i % GENBANK_HOST_COLORS.length] }} />
+                                  <span className="truncate flex-1" style={{ color: "#1C1917" }}>{host.name}</span>
+                                  <span className="shrink-0" style={{ color: "#A8A29E", fontFamily: "monospace" }}>{host.count} ({pct}%)</span>
+                                </div>
+                              );
+                            })}
+                            {genbankStats.hosts.length > 6 && (
+                              <div className="text-[10px]" style={{ color: "#A8A29E" }}>+{genbankStats.hosts.length - 6} more</div>
+                            )}
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
