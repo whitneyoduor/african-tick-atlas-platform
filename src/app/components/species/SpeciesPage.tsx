@@ -628,99 +628,6 @@ export function SpeciesPage() {
                 </div>
               )}
 
-              {/* Map + Table */}
-              <div className="grid grid-cols-2 gap-px" style={{ background: "#E2E5DE" }}>
-                <div style={{ background: "#FFFFFF", minHeight: 380 }}>
-                  {occurrenceLatLng.lat !== null || genbankRecords.some((m) => m.record.latitude !== null) ? (
-                    <GenBankMap
-                      records={genbankRecords}
-                      centerLat={occurrenceLatLng.lat}
-                      centerLng={occurrenceLatLng.lng}
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full min-h-[340px] px-6">
-                      <p className="text-xs text-center" style={{ color: "#A8A29E" }}>
-                        Geographic coordinates not available for these records.
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <div style={{ background: "#FFFFFF" }}>
-                  {/* Search bar */}
-                  <div className="px-3 py-2" style={{ borderBottom: "1px solid #F0F0F0" }}>
-                    <input
-                      type="text"
-                      placeholder="Search accession, host, location..."
-                      value={searchQuery}
-                      onChange={(e) => handleSearch(e.target.value)}
-                      className="w-full text-[12px] px-2 py-1 rounded"
-                      style={{ border: "1px solid #E2E5DE", color: "#1C1917", fontFamily: "system-ui", outline: "none" }}
-                    />
-                  </div>
-                  <div className="overflow-y-auto" style={{ maxHeight: 380 }}>
-                    <table className="w-full text-left" style={{ borderCollapse: "collapse" }}>
-                      <thead>
-                        <tr>
-                          {SORT_COLUMNS.map((col) => (
-                            <SortHeader
-                              key={col.key}
-                              column={col.key}
-                              label={col.label}
-                              sortBy={genbankSortBy}
-                              sortDir={genbankSortDir}
-                              onSort={handleSort}
-                            />
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {genbankRecords.map((m, i) => (
-                          <tr
-                            key={m.record.accession + i}
-                            style={{ borderBottom: "1px solid #F0F0F0" }}
-                            className="hover:bg-gray-50 transition-colors"
-                          >
-                            <td className="px-3 py-2">
-                              <a
-                                href={`${NCBI_BASE}${m.record.accession}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[12px] font-medium hover:underline"
-                                style={{ color: "#2563EB", fontFamily: "monospace" }}
-                              >
-                                {m.record.accession}
-                              </a>
-                            </td>
-                            <td className="px-3 py-2">
-                              <GeneBadge gene={m.record.gene} />
-                            </td>
-                            <td className="px-3 py-2 text-[12px]" style={{ color: "#1C1917", fontFamily: "monospace" }}>
-                              {m.record.sequenceLength?.toLocaleString() || "\u2014"}
-                              {m.record.sequenceLength && <span style={{ color: "#A8A29E" }}> bp</span>}
-                            </td>
-                            <td className="px-3 py-2 text-[12px]" style={{ color: "#57534E" }}>
-                              {m.record.location || "\u2014"}
-                              {m.distanceKm !== null && (
-                                <span className="text-[10px] ml-1" style={{ color: "#A8A29E" }}>
-                                  ({Math.round(m.distanceKm)} km)
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-[12px]" style={{ color: "#57534E" }}>
-                              {m.record.host || "\u2014"}
-                            </td>
-                            <td className="px-3 py-2 text-[12px]" style={{ color: "#57534E", fontFamily: "monospace" }}>
-                              {m.record.collectionDate || "\u2014"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <Pagination page={genbankPage} totalPages={genbankTotalPages} onPage={setGenbankPage} />
-                </div>
-              </div>
-
               {/* GenBank Dashboard */}
               {genbankStats && genbankStats.genes.length > 0 && (
                 <div className="p-4" style={{ background: "#FFFFFF", borderTop: "1px solid #E2E5DE" }}>
@@ -870,6 +777,99 @@ export function SpeciesPage() {
                   </div>
                 </div>
               )}
+
+              {/* Map + Table */}
+              <div className="grid grid-cols-2 gap-px" style={{ background: "#E2E5DE" }}>
+                <div style={{ background: "#FFFFFF", minHeight: 380 }}>
+                  {occurrenceLatLng.lat !== null || genbankRecords.some((m) => m.record.latitude !== null) ? (
+                    <GenBankMap
+                      records={genbankRecords}
+                      centerLat={occurrenceLatLng.lat}
+                      centerLng={occurrenceLatLng.lng}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full min-h-[340px] px-6">
+                      <p className="text-xs text-center" style={{ color: "#A8A29E" }}>
+                        Geographic coordinates not available for these records.
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div style={{ background: "#FFFFFF" }}>
+                  {/* Search bar */}
+                  <div className="px-3 py-2" style={{ borderBottom: "1px solid #F0F0F0" }}>
+                    <input
+                      type="text"
+                      placeholder="Search accession, host, location..."
+                      value={searchQuery}
+                      onChange={(e) => handleSearch(e.target.value)}
+                      className="w-full text-[12px] px-2 py-1 rounded"
+                      style={{ border: "1px solid #E2E5DE", color: "#1C1917", fontFamily: "system-ui", outline: "none" }}
+                    />
+                  </div>
+                  <div className="overflow-y-auto" style={{ maxHeight: 380 }}>
+                    <table className="w-full text-left" style={{ borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr>
+                          {SORT_COLUMNS.map((col) => (
+                            <SortHeader
+                              key={col.key}
+                              column={col.key}
+                              label={col.label}
+                              sortBy={genbankSortBy}
+                              sortDir={genbankSortDir}
+                              onSort={handleSort}
+                            />
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {genbankRecords.map((m, i) => (
+                          <tr
+                            key={m.record.accession + i}
+                            style={{ borderBottom: "1px solid #F0F0F0" }}
+                            className="hover:bg-gray-50 transition-colors"
+                          >
+                            <td className="px-3 py-2">
+                              <a
+                                href={`${NCBI_BASE}${m.record.accession}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[12px] font-medium hover:underline"
+                                style={{ color: "#2563EB", fontFamily: "monospace" }}
+                              >
+                                {m.record.accession}
+                              </a>
+                            </td>
+                            <td className="px-3 py-2">
+                              <GeneBadge gene={m.record.gene} />
+                            </td>
+                            <td className="px-3 py-2 text-[12px]" style={{ color: "#1C1917", fontFamily: "monospace" }}>
+                              {m.record.sequenceLength?.toLocaleString() || "\u2014"}
+                              {m.record.sequenceLength && <span style={{ color: "#A8A29E" }}> bp</span>}
+                            </td>
+                            <td className="px-3 py-2 text-[12px]" style={{ color: "#57534E" }}>
+                              {m.record.location || "\u2014"}
+                              {m.distanceKm !== null && (
+                                <span className="text-[10px] ml-1" style={{ color: "#A8A29E" }}>
+                                  ({Math.round(m.distanceKm)} km)
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-[12px]" style={{ color: "#57534E" }}>
+                              {m.record.host || "\u2014"}
+                            </td>
+                            <td className="px-3 py-2 text-[12px]" style={{ color: "#57534E", fontFamily: "monospace" }}>
+                              {m.record.collectionDate || "\u2014"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <Pagination page={genbankPage} totalPages={genbankTotalPages} onPage={setGenbankPage} />
+                </div>
+              </div>
             </>
           )}
         </div>
