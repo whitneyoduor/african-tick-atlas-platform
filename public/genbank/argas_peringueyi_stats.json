@@ -1,1 +1,1 @@
-{"total":6,"genes":[{"name":"28S","count":2}],"countries":[{"name":"South Africa: Bloemhof","count":4},{"name":"South Africa: Bloemhof, South Africa","count":2}],"hosts":[],"sequenceLength":{"min":2339,"max":14584,"mean":7084}}
+{"total":6,"genes":[{"name":"28S","count":2}],"countries":[{"name":"South Africa: Bloemhof","count":4},{"name":"South Africa: Bloemhof, South Africa","count":2}],"hosts":[],"geneAvgLength":[{"gene":"Unknown","avgBp":8652,"count":4},{"gene":"28S","avgBp":3948,"count":2}],"sequenceLength":{"min":2339,"max":14584,"mean":7084}}

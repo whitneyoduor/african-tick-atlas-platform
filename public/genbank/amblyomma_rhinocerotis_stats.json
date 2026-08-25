@@ -1,1 +1,1 @@
-{"total":1,"genes":[{"name":"12S","count":1}],"countries":[{"name":"Zimbabwe","count":1}],"hosts":[{"name":"Diceros bicornis","count":1}],"sequenceLength":{"min":355,"max":355,"mean":355}}
+{"total":1,"genes":[{"name":"12S","count":1}],"countries":[{"name":"Zimbabwe","count":1}],"hosts":[{"name":"Diceros bicornis","count":1}],"geneAvgLength":[{"gene":"12S","avgBp":355,"count":1}],"sequenceLength":{"min":355,"max":355,"mean":355}}

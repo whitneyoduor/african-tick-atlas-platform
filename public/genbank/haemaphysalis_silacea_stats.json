@@ -1,1 +1,1 @@
-{"total":3,"genes":[],"countries":[{"name":"South Africa","count":3}],"hosts":[{"name":"cattle","count":3}],"sequenceLength":{"min":421,"max":424,"mean":422}}
+{"total":3,"genes":[],"countries":[{"name":"South Africa","count":3}],"hosts":[{"name":"cattle","count":3}],"geneAvgLength":[{"gene":"Unknown","avgBp":422,"count":3}],"sequenceLength":{"min":421,"max":424,"mean":422}}

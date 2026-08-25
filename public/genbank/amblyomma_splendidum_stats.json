@@ -1,1 +1,1 @@
-{"total":2,"genes":[],"countries":[],"hosts":[],"sequenceLength":{"min":4434,"max":4434,"mean":4434}}
+{"total":2,"genes":[],"countries":[],"hosts":[],"geneAvgLength":[{"gene":"Unknown","avgBp":4434,"count":2}],"sequenceLength":{"min":4434,"max":4434,"mean":4434}}

@@ -1,1 +1,1 @@
-{"total":3,"genes":[],"countries":[{"name":"Cameroon","count":2}],"hosts":[],"sequenceLength":{"min":248,"max":1666,"mean":721}}
+{"total":3,"genes":[],"countries":[{"name":"Cameroon","count":2}],"hosts":[],"geneAvgLength":[{"gene":"Unknown","avgBp":721,"count":3}],"sequenceLength":{"min":248,"max":1666,"mean":721}}

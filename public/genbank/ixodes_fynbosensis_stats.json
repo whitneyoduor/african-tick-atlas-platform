@@ -1,1 +1,1 @@
-{"total":1,"genes":[{"name":"COI","count":1}],"countries":[],"hosts":[],"sequenceLength":{"min":600,"max":600,"mean":600}}
+{"total":1,"genes":[{"name":"COI","count":1}],"countries":[],"hosts":[],"geneAvgLength":[{"gene":"COI","avgBp":600,"count":1}],"sequenceLength":{"min":600,"max":600,"mean":600}}

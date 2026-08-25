@@ -1,1 +1,1 @@
-{"total":4,"genes":[{"name":"COX1","count":1}],"countries":[{"name":"South Africa","count":4}],"hosts":[{"name":"Civettictis civetta","count":4}],"sequenceLength":{"min":376,"max":1038,"mean":651}}
+{"total":4,"genes":[{"name":"COX1","count":1}],"countries":[{"name":"South Africa","count":4}],"hosts":[{"name":"Civettictis civetta","count":4}],"geneAvgLength":[{"gene":"Unknown","avgBp":668,"count":3},{"gene":"COX1","avgBp":599,"count":1}],"sequenceLength":{"min":376,"max":1038,"mean":651}}

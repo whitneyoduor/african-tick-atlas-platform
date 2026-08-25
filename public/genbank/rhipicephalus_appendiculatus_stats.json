@@ -1,1 +1,1 @@
-{"total":200,"genes":[],"countries":[{"name":"South Africa: Mpumalanga","count":200}],"hosts":[],"sequenceLength":{"min":1929,"max":2244534,"mean":87371}}
+{"total":200,"genes":[],"countries":[{"name":"South Africa: Mpumalanga","count":200}],"hosts":[],"geneAvgLength":[{"gene":"Unknown","avgBp":87371,"count":200}],"sequenceLength":{"min":1929,"max":2244534,"mean":87371}}

@@ -1,1 +1,1 @@
-{"total":1,"genes":[{"name":"ND2","count":1}],"countries":[{"name":"Zambia","count":1}],"hosts":[{"name":"Stigmochelys pardalis","count":1}],"sequenceLength":{"min":14681,"max":14681,"mean":14681}}
+{"total":1,"genes":[{"name":"ND2","count":1}],"countries":[{"name":"Zambia","count":1}],"hosts":[{"name":"Stigmochelys pardalis","count":1}],"geneAvgLength":[{"gene":"ND2","avgBp":14681,"count":1}],"sequenceLength":{"min":14681,"max":14681,"mean":14681}}

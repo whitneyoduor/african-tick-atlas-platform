@@ -1,1 +1,1 @@
-{"total":5,"genes":[],"countries":[{"name":"Cameroon","count":5}],"hosts":[{"name":"cattle","count":5}],"sequenceLength":{"min":336,"max":408,"mean":353}}
+{"total":5,"genes":[],"countries":[{"name":"Cameroon","count":5}],"hosts":[{"name":"cattle","count":5}],"geneAvgLength":[{"gene":"Unknown","avgBp":353,"count":5}],"sequenceLength":{"min":336,"max":408,"mean":353}}

@@ -1,1 +1,1 @@
-{"total":8,"genes":[{"name":"COX1","count":1},{"name":"12S","count":1},{"name":"COI","count":1}],"countries":[{"name":"Eswatini","count":4}],"hosts":[],"sequenceLength":{"min":231,"max":1208,"mean":612}}
+{"total":8,"genes":[{"name":"COX1","count":1},{"name":"12S","count":1},{"name":"COI","count":1}],"countries":[{"name":"Eswatini","count":4}],"hosts":[],"geneAvgLength":[{"gene":"Unknown","avgBp":671,"count":5},{"gene":"COX1","avgBp":520,"count":1},{"gene":"12S","avgBp":372,"count":1},{"gene":"COI","avgBp":645,"count":1}],"sequenceLength":{"min":231,"max":1208,"mean":612}}

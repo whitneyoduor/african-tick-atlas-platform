@@ -1,1 +1,1 @@
-{"total":2,"genes":[],"countries":[{"name":"China: Xinjiang, Beijiang","count":1},{"name":"China: Jimusaerxian","count":1}],"hosts":[],"sequenceLength":{"min":385,"max":422,"mean":404}}
+{"total":2,"genes":[],"countries":[{"name":"China: Xinjiang, Beijiang","count":1},{"name":"China: Jimusaerxian","count":1}],"hosts":[],"geneAvgLength":[{"gene":"Unknown","avgBp":404,"count":2}],"sequenceLength":{"min":385,"max":422,"mean":404}}

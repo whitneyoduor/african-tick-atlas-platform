@@ -1,1 +1,1 @@
-{"total":3,"genes":[{"name":"28S","count":1}],"countries":[{"name":"South Africa: Koegas","count":3}],"hosts":[],"sequenceLength":{"min":2011,"max":14287,"mean":6654}}
+{"total":3,"genes":[{"name":"28S","count":1}],"countries":[{"name":"South Africa: Koegas","count":3}],"hosts":[],"geneAvgLength":[{"gene":"Unknown","avgBp":8149,"count":2},{"gene":"28S","avgBp":3664,"count":1}],"sequenceLength":{"min":2011,"max":14287,"mean":6654}}

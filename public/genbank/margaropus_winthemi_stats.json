@@ -1,1 +1,1 @@
-{"total":4,"genes":[{"name":"COX1","count":1}],"countries":[{"name":"South Africa: Taung, North West Province","count":4}],"hosts":[],"sequenceLength":{"min":367,"max":1607,"mean":867}}
+{"total":4,"genes":[{"name":"COX1","count":1}],"countries":[{"name":"South Africa: Taung, North West Province","count":4}],"hosts":[],"geneAvgLength":[{"gene":"Unknown","avgBp":975,"count":3},{"gene":"COX1","avgBp":542,"count":1}],"sequenceLength":{"min":367,"max":1607,"mean":867}}

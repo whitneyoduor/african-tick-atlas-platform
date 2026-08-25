@@ -721,63 +721,151 @@ export function SpeciesPage() {
                 </div>
               </div>
 
-              {/* Gene breakdown chart */}
+              {/* GenBank Dashboard */}
               {genbankStats && genbankStats.genes.length > 0 && (
-                <div className="grid grid-cols-2 gap-px" style={{ background: "#E2E5DE", borderTop: "1px solid #E2E5DE" }}>
-                  <div style={{ background: "#FFFFFF" }}>
-                    <div className="px-5 py-3 border-b" style={{ borderColor: "#E2E5DE" }}>
-                      <h4 className="text-[11px] font-semibold" style={{ color: "#1C1917" }}>Gene Distribution</h4>
-                    </div>
-                    <div className="p-3 overflow-hidden" style={{ height: 200 }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={genbankStats.genes.slice(0, 8)} layout="vertical" margin={{ left: 0, right: 20, top: 5, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#EBEDE9" horizontal={false} />
-                          <XAxis type="number" tick={{ fontSize: 11, fill: "#A8A29E", fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: "#E2E5DE" }} />
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#1C1917" }} tickLine={false} axisLine={false} width={100} />
-                          <Tooltip contentStyle={{ borderRadius: 2, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }} />
-                          <Bar dataKey="count" fill="#0F766E" radius={[0, 3, 3, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                  <div style={{ background: "#FFFFFF" }}>
-                    <div className="px-5 py-3 border-b" style={{ borderColor: "#E2E5DE" }}>
-                      <h4 className="text-[11px] font-semibold" style={{ color: "#1C1917" }}>GenBank Hosts</h4>
-                    </div>
-                    <div className="p-3 overflow-hidden" style={{ height: 200 }}>
-                      {genbankStats.hosts.length === 0 ? (
-                        <p className="text-xs py-4 text-center" style={{ color: "#A8A29E" }}>No host data available</p>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <div style={{ width: 180, height: 180, flexShrink: 0 }}>
+                <div className="p-4" style={{ background: "#FFFFFF", borderTop: "1px solid #E2E5DE" }}>
+                  <h4 className="text-[12px] font-semibold mb-3" style={{ color: "#1C1917" }}>Sequence Overview</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Gene Distribution — Pie */}
+                    <div className="rounded-lg overflow-hidden" style={{ border: "1px solid #E2E5DE" }}>
+                      <div className="px-4 py-2.5" style={{ borderBottom: "1px solid #F0F0F0" }}>
+                        <h5 className="text-[11px] font-semibold" style={{ color: "#1C1917" }}>Gene Distribution</h5>
+                        <p className="text-[10px]" style={{ color: "#A8A29E" }}>Sequences by target gene</p>
+                      </div>
+                      <div className="p-3">
+                        <div className="flex items-center gap-2">
+                          <div style={{ width: 140, height: 140, flexShrink: 0 }}>
                             <ResponsiveContainer width="100%" height="100%">
-                              <Treemap
-                                data={genbankStats.hosts.slice(0, 8)}
-                                dataKey="count"
-                                ratio={4 / 3}
-                                stroke="#FFFFFF"
-                                content={<HostTreemapContent colors={GENBANK_HOST_COLORS} />}
-                              />
+                              <PieChart>
+                                <Pie
+                                  data={genbankStats.genes.slice(0, 8)}
+                                  cx="50%" cy="50%"
+                                  innerRadius={35} outerRadius={60}
+                                  paddingAngle={2}
+                                  dataKey="count" nameKey="name"
+                                  strokeWidth={0}
+                                >
+                                  {genbankStats.genes.slice(0, 8).map((_, i) => (
+                                    <Cell key={i} fill={["#0F766E", "#14B8A6", "#2DD4BF", "#0D9488", "#115E59", "#134E4A", "#5EEAD4", "#99F6E4"][i % 8]} />
+                                  ))}
+                                </Pie>
+                                <Tooltip contentStyle={{ borderRadius: 6, border: "1px solid #E2E5DE", fontSize: 11, fontFamily: "monospace", background: "#FFFFFF", padding: "6px 10px" }} />
+                              </PieChart>
                             </ResponsiveContainer>
                           </div>
-                          <div className="flex-1 space-y-1.5 min-w-0">
-                            {genbankStats.hosts.slice(0, 6).map((host, i) => {
-                              const total = genbankStats.hosts.reduce((s, h) => s + h.count, 0);
-                              const pct = total > 0 ? ((host.count / total) * 100).toFixed(0) : "0";
+                          <div className="flex-1 space-y-1 min-w-0">
+                            {genbankStats.genes.slice(0, 6).map((g, i) => {
+                              const pct = genbankStats.total > 0 ? ((g.count / genbankStats.total) * 100).toFixed(0) : "0";
                               return (
-                                <div key={host.name} className="flex items-center gap-1.5 text-[11px]">
-                                  <div className="w-2 h-2 rounded-sm shrink-0" style={{ background: GENBANK_HOST_COLORS[i % GENBANK_HOST_COLORS.length] }} />
-                                  <span className="truncate flex-1" style={{ color: "#1C1917" }}>{host.name}</span>
-                                  <span className="shrink-0" style={{ color: "#A8A29E", fontFamily: "monospace" }}>{host.count} ({pct}%)</span>
+                                <div key={g.name} className="flex items-center gap-1.5 text-[10px]">
+                                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: ["#0F766E", "#14B8A6", "#2DD4BF", "#0D9488", "#115E59", "#134E4A", "#5EEAD4", "#99F6E4"][i % 8] }} />
+                                  <span className="truncate flex-1" style={{ color: "#1C1917" }}>{g.name}</span>
+                                  <span className="shrink-0" style={{ color: "#A8A29E", fontFamily: "monospace" }}>{pct}%</span>
                                 </div>
                               );
                             })}
-                            {genbankStats.hosts.length > 6 && (
-                              <div className="text-[10px]" style={{ color: "#A8A29E" }}>+{genbankStats.hosts.length - 6} more</div>
+                            {genbankStats.genes.length > 6 && (
+                              <div className="text-[9px]" style={{ color: "#A8A29E" }}>+{genbankStats.genes.length - 6} more</div>
                             )}
                           </div>
                         </div>
-                      )}
+                      </div>
+                    </div>
+
+                    {/* Countries — Bar Chart */}
+                    <div className="rounded-lg overflow-hidden" style={{ border: "1px solid #E2E5DE" }}>
+                      <div className="px-4 py-2.5" style={{ borderBottom: "1px solid #F0F0F0" }}>
+                        <h5 className="text-[11px] font-semibold" style={{ color: "#1C1917" }}>Sequences by Country</h5>
+                        <p className="text-[10px]" style={{ color: "#A8A29E" }}>Geographic distribution of submissions</p>
+                      </div>
+                      <div className="p-3" style={{ height: 180 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={genbankStats.countries.slice(0, 8)} layout="vertical" margin={{ left: 0, right: 20, top: 5, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#EBEDE9" horizontal={false} />
+                            <XAxis type="number" tick={{ fontSize: 10, fill: "#A8A29E", fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: "#E2E5DE" }} />
+                            <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "#1C1917" }} tickLine={false} axisLine={false} width={110} />
+                            <Tooltip contentStyle={{ borderRadius: 6, border: "1px solid #E2E5DE", fontSize: 11, fontFamily: "monospace", background: "#FFFFFF", padding: "6px 10px" }} />
+                            <Bar dataKey="count" radius={[0, 3, 3, 0]} maxBarSize={16}>
+                              {genbankStats.countries.slice(0, 8).map((_, i) => (
+                                <Cell key={i} fill={["#2563EB", "#3B82F6", "#60A5FA", "#93C5FD", "#BFDBFE", "#1D4ED8", "#1E40AF", "#DBEAFE"][i % 8]} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Hosts — Treemap */}
+                    <div className="rounded-lg overflow-hidden" style={{ border: "1px solid #E2E5DE" }}>
+                      <div className="px-4 py-2.5" style={{ borderBottom: "1px solid #F0F0F0" }}>
+                        <h5 className="text-[11px] font-semibold" style={{ color: "#1C1917" }}>Host Organisms</h5>
+                        <p className="text-[10px]" style={{ color: "#A8A29E" }}>Hosts from which tick was collected</p>
+                      </div>
+                      <div className="p-3 overflow-hidden" style={{ height: 180 }}>
+                        {genbankStats.hosts.length === 0 ? (
+                          <p className="text-[11px] py-6 text-center" style={{ color: "#A8A29E" }}>No host data</p>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div style={{ width: 140, height: 140, flexShrink: 0 }}>
+                              <ResponsiveContainer width="100%" height="100%">
+                                <Treemap
+                                  data={genbankStats.hosts.slice(0, 8)}
+                                  dataKey="count"
+                                  ratio={4 / 3}
+                                  stroke="#FFFFFF"
+                                  content={<HostTreemapContent colors={GENBANK_HOST_COLORS} />}
+                                />
+                              </ResponsiveContainer>
+                            </div>
+                            <div className="flex-1 space-y-1 min-w-0">
+                              {genbankStats.hosts.slice(0, 5).map((host, i) => {
+                                const total = genbankStats.hosts.reduce((s, h) => s + h.count, 0);
+                                const pct = total > 0 ? ((host.count / total) * 100).toFixed(0) : "0";
+                                return (
+                                  <div key={host.name} className="flex items-center gap-1.5 text-[10px]">
+                                    <div className="w-2 h-2 rounded-sm shrink-0" style={{ background: GENBANK_HOST_COLORS[i % GENBANK_HOST_COLORS.length] }} />
+                                    <span className="truncate flex-1" style={{ color: "#1C1917" }}>{host.name}</span>
+                                    <span className="shrink-0" style={{ color: "#A8A29E", fontFamily: "monospace" }}>{pct}%</span>
+                                  </div>
+                                );
+                              })}
+                              {genbankStats.hosts.length > 5 && (
+                                <div className="text-[9px]" style={{ color: "#A8A29E" }}>+{genbankStats.hosts.length - 5} more</div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Avg Sequence Length by Gene — Bar */}
+                    <div className="rounded-lg overflow-hidden" style={{ border: "1px solid #E2E5DE" }}>
+                      <div className="px-4 py-2.5" style={{ borderBottom: "1px solid #F0F0F0" }}>
+                        <h5 className="text-[11px] font-semibold" style={{ color: "#1C1917" }}>Avg Sequence Length by Gene</h5>
+                        <p className="text-[10px]" style={{ color: "#A8A29E" }}>Mean base pairs per gene target</p>
+                      </div>
+                      <div className="p-3" style={{ height: 180 }}>
+                        {genbankStats.geneAvgLength && genbankStats.geneAvgLength.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={genbankStats.geneAvgLength.slice(0, 8)} layout="vertical" margin={{ left: 0, right: 30, top: 5, bottom: 5 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#EBEDE9" horizontal={false} />
+                              <XAxis type="number" tick={{ fontSize: 10, fill: "#A8A29E", fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: "#E2E5DE" }} />
+                              <YAxis type="category" dataKey="gene" tick={{ fontSize: 10, fill: "#1C1917" }} tickLine={false} axisLine={false} width={100} />
+                              <Tooltip
+                                contentStyle={{ borderRadius: 6, border: "1px solid #E2E5DE", fontSize: 11, fontFamily: "monospace", background: "#FFFFFF", padding: "6px 10px" }}
+                                formatter={(value: number) => [`${value.toLocaleString()} bp`, "Avg Length"]}
+                              />
+                              <Bar dataKey="avgBp" radius={[0, 3, 3, 0]} maxBarSize={16}>
+                                {genbankStats.geneAvgLength.slice(0, 8).map((_, i) => (
+                                  <Cell key={i} fill={["#D97706", "#F59E0B", "#B45309", "#FBBF24", "#92400E", "#FCD34D", "#78350F", "#451A03"][i % 8]} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <p className="text-[11px] py-6 text-center" style={{ color: "#A8A29E" }}>No length data available</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

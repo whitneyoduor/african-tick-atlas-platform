@@ -346,12 +346,19 @@ export async function getGenBankStats(species: string) {
   const countryCounts: Record<string, number> = {};
   const hostCounts: Record<string, number> = {};
   const lengths: number[] = [];
+  const geneLengthSums: Record<string, { total: number; count: number }> = {};
 
   for (const r of records) {
     if (r.gene) geneCounts[r.gene] = (geneCounts[r.gene] || 0) + 1;
     if (r.country) countryCounts[r.country] = (countryCounts[r.country] || 0) + 1;
     if (r.host) hostCounts[r.host] = (hostCounts[r.host] || 0) + 1;
-    if (r.sequenceLength) lengths.push(r.sequenceLength);
+    if (r.sequenceLength) {
+      lengths.push(r.sequenceLength);
+      const g = r.gene || "Unknown";
+      if (!geneLengthSums[g]) geneLengthSums[g] = { total: 0, count: 0 };
+      geneLengthSums[g].total += r.sequenceLength;
+      geneLengthSums[g].count++;
+    }
   }
 
   return {
@@ -365,6 +372,10 @@ export async function getGenBankStats(species: string) {
     hosts: Object.entries(hostCounts)
       .sort((a, b) => b[1] - a[1])
       .map(([name, count]) => ({ name, count })),
+    geneAvgLength: Object.entries(geneLengthSums)
+      .filter(([_, v]) => v.count > 0)
+      .map(([gene, v]) => ({ gene, avgBp: Math.round(v.total / v.count), count: v.count }))
+      .sort((a, b) => b.count - a.count),
     sequenceLength: lengths.length > 0
       ? {
           min: Math.min(...lengths),

@@ -1,1 +1,1 @@
-{"total":200,"genes":[{"name":"COX1","count":106}],"countries":[{"name":"China: Xinjiang","count":200}],"hosts":[],"sequenceLength":{"min":408,"max":719,"mean":573}}
+{"total":200,"genes":[{"name":"COX1","count":106}],"countries":[{"name":"China: Xinjiang","count":200}],"hosts":[],"geneAvgLength":[{"gene":"COX1","avgBp":719,"count":106},{"gene":"Unknown","avgBp":408,"count":94}],"sequenceLength":{"min":408,"max":719,"mean":573}}

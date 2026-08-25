@@ -1,1 +1,1 @@
-{"total":2,"genes":[{"name":"16S","count":1},{"name":"12S","count":1}],"countries":[{"name":"South Africa","count":2}],"hosts":[{"name":"Bos taurus (domestic cow)","count":2}],"sequenceLength":{"min":339,"max":411,"mean":375}}
+{"total":2,"genes":[{"name":"16S","count":1},{"name":"12S","count":1}],"countries":[{"name":"South Africa","count":2}],"hosts":[{"name":"Bos taurus (domestic cow)","count":2}],"geneAvgLength":[{"gene":"16S","avgBp":411,"count":1},{"gene":"12S","avgBp":339,"count":1}],"sequenceLength":{"min":339,"max":411,"mean":375}}

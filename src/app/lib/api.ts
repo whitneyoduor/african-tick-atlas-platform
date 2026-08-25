@@ -476,6 +476,7 @@ export interface GenBankStats {
   genes: { name: string; count: number }[];
   countries: { name: string; count: number }[];
   hosts: { name: string; count: number }[];
+  geneAvgLength: { gene: string; avgBp: number; count: number }[];
   sequenceLength: { min: number; max: number; mean: number } | null;
 }
 

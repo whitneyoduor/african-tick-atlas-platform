@@ -1,1 +1,1 @@
-{"total":3,"genes":[],"countries":[{"name":"South Africa","count":3}],"hosts":[{"name":"Crocidura silacea","count":3}],"sequenceLength":{"min":263,"max":383,"mean":303}}
+{"total":3,"genes":[],"countries":[{"name":"South Africa","count":3}],"hosts":[{"name":"Crocidura silacea","count":3}],"geneAvgLength":[{"gene":"Unknown","avgBp":303,"count":3}],"sequenceLength":{"min":263,"max":383,"mean":303}}

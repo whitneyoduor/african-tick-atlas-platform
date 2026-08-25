@@ -1,1 +1,1 @@
-{"total":3,"genes":[],"countries":[{"name":"Ethiopia","count":3}],"hosts":[],"sequenceLength":{"min":231,"max":395,"mean":315}}
+{"total":3,"genes":[],"countries":[{"name":"Ethiopia","count":3}],"hosts":[],"geneAvgLength":[{"gene":"Unknown","avgBp":315,"count":3}],"sequenceLength":{"min":231,"max":395,"mean":315}}

@@ -1,1 +1,1 @@
-{"total":9,"genes":[{"name":"COX1","count":2}],"countries":[{"name":"Democratic Republic of the Congo","count":9}],"hosts":[{"name":"pig","count":9}],"sequenceLength":{"min":339,"max":699,"mean":449}}
+{"total":9,"genes":[{"name":"COX1","count":2}],"countries":[{"name":"Democratic Republic of the Congo","count":9}],"hosts":[{"name":"pig","count":9}],"geneAvgLength":[{"gene":"Unknown","avgBp":378,"count":7},{"gene":"COX1","avgBp":699,"count":2}],"sequenceLength":{"min":339,"max":699,"mean":449}}
