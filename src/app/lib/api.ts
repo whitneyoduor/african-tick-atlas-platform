@@ -439,9 +439,45 @@ export interface GenBankStats {
 
 let genbankStaticCache: Record<string, GenBankResponse> = {};
 let genbankStaticStatsCache: Record<string, GenBankStats> = {};
+let genbankIndexCache: Record<string, string> | null = null;
 
 function genbankSafeName(species: string): string {
   return species.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+}
+
+export async function fetchGenBankIndex(): Promise<Record<string, string>> {
+  if (genbankIndexCache) return genbankIndexCache;
+  try {
+    const res = await fetch("/genbank/_index.json");
+    if (!res.ok) return {};
+    genbankIndexCache = await res.json();
+    return genbankIndexCache;
+  } catch {
+    return {};
+  }
+}
+
+export async function fetchGenBankStatsBatch(
+  speciesList: string[]
+): Promise<Map<string, GenBankStats | null>> {
+  const index = await fetchGenBankIndex();
+  const validSpecies = speciesList.filter((sp) => index[sp] != null);
+  const results = await Promise.all(
+    validSpecies.map(async (sp) => {
+      try {
+        const stats = await fetchGenBankStats(sp);
+        return [sp, stats] as const;
+      } catch {
+        return [sp, null] as const;
+      }
+    })
+  );
+  const map = new Map<string, GenBankStats | null>();
+  for (const [sp, stats] of results) map.set(sp, stats);
+  for (const sp of speciesList) {
+    if (!map.has(sp)) map.set(sp, null);
+  }
+  return map;
 }
 
 export async function fetchGenBank(
