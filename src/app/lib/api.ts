@@ -399,12 +399,14 @@ export function exportAsCSV(records: EpidemiologicalRecord[]): void {
 }
 
 export interface GenBankRecord {
+  id: number;
   accession: string;
+  species: string | null;
   organism: string | null;
-  sequenceLength: number | null;
   gene: string | null;
+  sequenceLength: number | null;
   definition: string | null;
-  taxonomy: string[];
+  taxonomy: string | null;
   collectionDate: string | null;
   country: string | null;
   location: string | null;
@@ -420,15 +422,58 @@ export interface GenBankMatch {
 
 export interface GenBankResponse {
   species: string;
-  query: { lat: number; lon: number; radiusKm: number } | null;
   total: number;
-  matched: number;
+  page: number;
+  limit: number;
+  totalPages: number;
   records: GenBankMatch[];
 }
 
-export async function fetchGenBank(species: string, signal?: AbortSignal): Promise<GenBankResponse | null> {
+export interface GenBankStats {
+  total: number;
+  genes: { name: string; count: number }[];
+  countries: { name: string; count: number }[];
+  hosts: { name: string; count: number }[];
+  sequenceLength: { min: number; max: number; mean: number } | null;
+}
+
+export async function fetchGenBank(
+  species: string,
+  opts?: {
+    gene?: string;
+    search?: string;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+    page?: number;
+    limit?: number;
+    lat?: number;
+    lng?: number;
+    signal?: AbortSignal;
+  }
+): Promise<GenBankResponse | null> {
   try {
-    const res = await fetch(`${API_BASE}/genbank/${encodeURIComponent(species)}`, { signal });
+    const qs = new URLSearchParams();
+    if (opts?.gene) qs.set("gene", opts.gene);
+    if (opts?.search) qs.set("search", opts.search);
+    if (opts?.sortBy) qs.set("sortBy", opts.sortBy);
+    if (opts?.sortDir) qs.set("sortDir", opts.sortDir);
+    if (opts?.page) qs.set("page", String(opts.page));
+    if (opts?.limit) qs.set("limit", String(opts.limit));
+    if (opts?.lat != null) qs.set("lat", String(opts.lat));
+    if (opts?.lng != null) qs.set("lng", String(opts.lng));
+    const qsStr = qs.toString();
+    const url = `${API_BASE}/genbank/${encodeURIComponent(species)}${qsStr ? "?" + qsStr : ""}`;
+    const res = await fetch(url, { signal: opts?.signal });
+    if (!res.ok) throw new Error("API error");
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchGenBankStats(species: string, signal?: AbortSignal): Promise<GenBankStats | null> {
+  try {
+    const res = await fetch(`${API_BASE}/genbank/stats/${encodeURIComponent(species)}`, { signal });
     if (!res.ok) throw new Error("API error");
     return res.json();
   } catch {

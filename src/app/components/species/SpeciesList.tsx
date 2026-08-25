@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router";
-import { fetchEpidemiological, fetchEpidemiologicalMeta, type EpidemiologicalRecord, type EpidemiologicalMeta } from "../../lib/api";
+import { fetchEpidemiological, fetchEpidemiologicalMeta, fetchGenBankStats, type EpidemiologicalRecord, type EpidemiologicalMeta, type GenBankStats } from "../../lib/api";
 import { prioritizeSpecies } from "../../lib/species";
 import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader } from "../common/Atlas";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -13,6 +13,8 @@ export function SpeciesList() {
   const [loading, setLoading] = useState(true);
   const [selectedLoading, setSelectedLoading] = useState(false);
   const [selected, setSelected] = useState("");
+  const [genbankStats, setGenbankStats] = useState<GenBankStats | null>(null);
+  const [genbankLoading, setGenbankLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -45,6 +47,16 @@ export function SpeciesList() {
       .then((res) => { if (active) setRecords(res.data); })
       .catch(() => { if (active) setRecords([]); })
       .finally(() => { if (active) setSelectedLoading(false); });
+    return () => { active = false; };
+  }, [selected]);
+
+  useEffect(() => {
+    if (!selected) { setGenbankStats(null); return; }
+    let active = true;
+    setGenbankLoading(true);
+    fetchGenBankStats(selected)
+      .then((s) => { if (active) { setGenbankStats(s); setGenbankLoading(false); } })
+      .catch(() => { if (active) { setGenbankStats(null); setGenbankLoading(false); } });
     return () => { active = false; };
   }, [selected]);
 
@@ -130,6 +142,80 @@ export function SpeciesList() {
             </Chip>
           )}
         </FilterBar>
+
+        {selected && (
+          <Panel title="Molecular Data — GenBank" className="mb-6">
+            {genbankLoading ? (
+              <p className="text-[13px] py-6 text-center" style={{ color: atlas.textMuted }}>Loading GenBank data...</p>
+            ) : genbankStats && genbankStats.total > 0 ? (
+              <>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  <div className="px-4 py-3 rounded" style={{ background: atlas.bg }}>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: atlas.textMuted }}>Sequences</div>
+                    <div className="text-xl font-semibold mt-0.5" style={{ color: atlas.text, fontFamily: "monospace" }}>{genbankStats.total.toLocaleString()}</div>
+                  </div>
+                  <div className="px-4 py-3 rounded" style={{ background: atlas.bg }}>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: atlas.textMuted }}>Genes</div>
+                    <div className="text-xl font-semibold mt-0.5" style={{ color: atlas.text, fontFamily: "monospace" }}>{genbankStats.genes.length}</div>
+                  </div>
+                  <div className="px-4 py-3 rounded" style={{ background: atlas.bg }}>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: atlas.textMuted }}>Countries</div>
+                    <div className="text-xl font-semibold mt-0.5" style={{ color: atlas.text, fontFamily: "monospace" }}>{genbankStats.countries.length}</div>
+                  </div>
+                  <div className="px-4 py-3 rounded" style={{ background: atlas.bg }}>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: atlas.textMuted }}>Avg Length</div>
+                    <div className="text-xl font-semibold mt-0.5" style={{ color: atlas.text, fontFamily: "monospace" }}>
+                      {genbankStats.sequenceLength ? `${genbankStats.sequenceLength.mean.toLocaleString()} bp` : "—"}
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {genbankStats.genes.length > 0 && (
+                    <div>
+                      <h4 className="text-[11px] font-semibold mb-2" style={{ color: atlas.text }}>Gene Distribution</h4>
+                      <ResponsiveContainer width="100%" height={Math.max(180, genbankStats.genes.length * 28 + 40)}>
+                        <BarChart data={genbankStats.genes.slice(0, 10)} layout="vertical" margin={{ left: 0, right: 30 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={atlas.grid} horizontal={false} />
+                          <XAxis type="number" tick={{ fontSize: 11, fill: atlas.textMuted, fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: atlas.border }} />
+                          <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: atlas.text }} tickLine={false} axisLine={false} width={80} />
+                          <Tooltip contentStyle={tooltipStyle} />
+                          <Bar dataKey="count" fill="#0F766E" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                  {genbankStats.hosts.length > 0 && (
+                    <div>
+                      <h4 className="text-[11px] font-semibold mb-2" style={{ color: atlas.text }}>GenBank Hosts</h4>
+                      <ResponsiveContainer width="100%" height={Math.max(180, genbankStats.hosts.length * 28 + 40)}>
+                        <BarChart data={genbankStats.hosts.slice(0, 10)} layout="vertical" margin={{ left: 0, right: 30 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={atlas.grid} horizontal={false} />
+                          <XAxis type="number" tick={{ fontSize: 11, fill: atlas.textMuted, fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: atlas.border }} />
+                          <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: atlas.text }} tickLine={false} axisLine={false} width={130} />
+                          <Tooltip contentStyle={tooltipStyle} />
+                          <Bar dataKey="count" fill={atlas.amber} radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-3 text-right">
+                  <button
+                    onClick={() => navigate(`/species/${encodeURIComponent(selected)}`)}
+                    className="text-[12px] font-medium hover:underline"
+                    style={{ color: atlas.teal }}
+                  >
+                    View full species page →
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="text-[13px] py-6 text-center" style={{ color: atlas.textMuted }}>
+                No GenBank records found for this species.
+              </p>
+            )}
+          </Panel>
+        )}
 
         {!selected && overview && (
           <>

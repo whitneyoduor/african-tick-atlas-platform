@@ -41,3 +41,25 @@ model EpidemiologicalRecord {
   @@index([epidemiologicalDisease])
   @@map("epidemiological_records")
 }
+
+model GenBankRecord {
+  id             Int     @id @default(autoincrement())
+  accession      String  @unique
+  species        String?
+  organism       String?
+  gene           String?
+  sequenceLength Int?
+  definition     String?
+  taxonomy       String?
+  collectionDate String?
+  country        String?
+  location       String?
+  latitude       Float?
+  longitude      Float?
+  host           String?
+
+  @@index([species])
+  @@index([gene])
+  @@index([country])
+  @@map("genbank_records")
+}

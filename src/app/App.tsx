@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route } from "react-router";
+import { BrowserRouter, Routes, Route, useParams } from "react-router";
 import { Layout } from "./components/layout/Layout";
 
 const MapPage = lazy(() => import("./components/map/MapPage").then(m => ({ default: m.MapPage })));
@@ -11,6 +11,11 @@ const DiseasePage = lazy(() => import("./components/disease/DiseasePage").then(m
 const EnvironmentalLayers = lazy(() => import("./components/environmental/EnvironmentalLayers").then(m => ({ default: m.EnvironmentalLayers })));
 const Downloads = lazy(() => import("./components/downloads/Downloads").then(m => ({ default: m.Downloads })));
 const About = lazy(() => import("./components/about/About").then(m => ({ default: m.About })));
+
+function SpeciesPageWrapper() {
+  const { name } = useParams();
+  return <SpeciesPage key={name} />;
+}
 
 function Loading() {
   return (
@@ -28,7 +33,7 @@ export default function App() {
           <Route index element={<Suspense fallback={<Loading />}><MapPage /></Suspense>} />
           <Route path="trends" element={<Suspense fallback={<Loading />}><Trends /></Suspense>} />
           <Route path="species" element={<Suspense fallback={<Loading />}><SpeciesList /></Suspense>} />
-          <Route path="species/:name" element={<Suspense fallback={<Loading />}><SpeciesPage /></Suspense>} />
+          <Route path="species/:name" element={<Suspense fallback={<Loading />}><SpeciesPageWrapper /></Suspense>} />
           <Route path="diseases" element={<Suspense fallback={<Loading />}><DiseaseList /></Suspense>} />
           <Route path="diseases/:name" element={<Suspense fallback={<Loading />}><DiseasePage /></Suspense>} />
           <Route path="environmental" element={<Suspense fallback={<Loading />}><EnvironmentalLayers /></Suspense>} />

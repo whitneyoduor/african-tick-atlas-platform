@@ -10,7 +10,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx src/import.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:seed-genbank": "tsx src/scripts/seed-genbank.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",
