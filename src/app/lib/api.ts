@@ -462,8 +462,11 @@ export async function fetchGenBank(
     if (USE_STATIC) {
       const safeName = genbankSafeName(species);
       if (!genbankStaticCache[safeName]) {
-        const res = await fetch(`/genbank/${safeName}.json`);
-        if (!res.ok) return null;
+        const res = await fetch(`/genbank/${safeName}.json`, { signal: opts?.signal });
+        if (!res.ok) {
+          console.warn(`[GenBank static] No file for "${species}" (${safeName}.json): ${res.status}`);
+          return null;
+        }
         genbankStaticCache[safeName] = await res.json();
       }
       let data = genbankStaticCache[safeName];
@@ -530,7 +533,8 @@ export async function fetchGenBank(
     const res = await fetch(url, { signal: opts?.signal });
     if (!res.ok) throw new Error("API error");
     return res.json();
-  } catch {
+  } catch (err) {
+    console.error(`[GenBank] Failed to fetch for "${species}":`, err);
     return null;
   }
 }
@@ -540,8 +544,11 @@ export async function fetchGenBankStats(species: string, signal?: AbortSignal): 
     if (USE_STATIC) {
       const safeName = genbankSafeName(species);
       if (!genbankStaticStatsCache[safeName]) {
-        const res = await fetch(`/genbank/${safeName}_stats.json`);
-        if (!res.ok) return null;
+        const res = await fetch(`/genbank/${safeName}_stats.json`, { signal });
+        if (!res.ok) {
+          console.warn(`[GenBank stats static] No file for "${species}" (${safeName}_stats.json): ${res.status}`);
+          return null;
+        }
         genbankStaticStatsCache[safeName] = await res.json();
       }
       return genbankStaticStatsCache[safeName];
@@ -549,7 +556,8 @@ export async function fetchGenBankStats(species: string, signal?: AbortSignal): 
     const res = await fetch(`${API_BASE}/genbank/stats/${encodeURIComponent(species)}`, { signal });
     if (!res.ok) throw new Error("API error");
     return res.json();
-  } catch {
+  } catch (err) {
+    console.error(`[GenBank stats] Failed to fetch for "${species}":`, err);
     return null;
   }
 }

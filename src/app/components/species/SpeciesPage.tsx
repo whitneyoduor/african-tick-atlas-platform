@@ -452,23 +452,22 @@ export function SpeciesPage() {
     </div>
   );
 
-  if (!species || records.length === 0) {
+  if (!species) {
     return (
       <div className="max-w-7xl mx-auto px-6 py-6" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
         <button onClick={() => navigate("/species")} className="text-sm mb-4 hover:underline" style={{ color: "#134E4A" }}>&larr; Back to Species</button>
-        <h1 className="text-2xl font-semibold" style={{ color: "#1C1917" }}>{species || "Species"}</h1>
+        <h1 className="text-2xl font-semibold" style={{ color: "#1C1917" }}>Species</h1>
         <div className="mt-4 px-5 py-8 text-center" style={{ background: "#FFFFFF", border: "1px solid #E2E5DE" }}>
-          <p className="text-sm" style={{ color: "#57534E" }}>
-            No records found for this species. Try the search box in the header.
-          </p>
+          <p className="text-sm" style={{ color: "#57534E" }}>No species selected.</p>
         </div>
       </div>
     );
   }
 
-  const hostCount = new Set(records.map(r => r.relatedHosts).filter(Boolean)).size;
-  const diseaseCount = new Set(records.map(r => r.epidemiologicalDisease).filter(Boolean)).size;
-  const countryCount = new Set(records.map(r => r.country).filter(Boolean)).size;
+  const hasEpi = records.length > 0;
+  const hostCount = hasEpi ? new Set(records.map(r => r.relatedHosts).filter(Boolean)).size : 0;
+  const diseaseCount = hasEpi ? new Set(records.map(r => r.epidemiologicalDisease).filter(Boolean)).size : 0;
+  const countryCount = hasEpi ? new Set(records.map(r => r.country).filter(Boolean)).size : 0;
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-6" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -476,23 +475,28 @@ export function SpeciesPage() {
         <button onClick={() => navigate("/species")} className="text-sm mb-1 hover:underline" style={{ color: "#134E4A" }}>&larr; Back to Species</button>
         <h1 className="text-2xl font-semibold" style={{ color: "#1C1917" }}>{species}</h1>
         <p className="text-sm mt-1" style={{ color: "#57534E" }}>
-          {records.length.toLocaleString()} records &middot; {countryCount} countries &middot; {hostCount} hosts &middot; {diseaseCount} diseases
+          {hasEpi && <>{records.length.toLocaleString()} epi records &middot; {countryCount} countries &middot; {hostCount} hosts &middot; {diseaseCount} diseases</>}
+          {!hasEpi && genbankTotal === 0 && !genbankLoading && "No epidemiological records found for this species."}
+          {!hasEpi && genbankTotal > 0 && <>{genbankTotal.toLocaleString()} GenBank sequences</>}
+          {!hasEpi && genbankTotal === 0 && genbankLoading && "Loading GenBank data..."}
         </p>
       </div>
 
-      <div className="grid grid-cols-4 gap-px mb-6" style={{ background: "#E2E5DE" }}>
-        {[
-          { label: "Epi Records", value: records.length },
-          { label: "Countries", value: countryCount },
-          { label: "Hosts", value: hostCount },
-          { label: "Diseases", value: diseaseCount },
-        ].map((m) => (
-          <div key={m.label} className="px-5 py-4" style={{ background: "#FFFFFF" }}>
-            <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#A8A29E" }}>{m.label}</div>
-            <div className="text-3xl font-semibold mt-1" style={{ color: "#1C1917", fontFamily: "monospace" }}>{m.value.toLocaleString()}</div>
-          </div>
-        ))}
-      </div>
+      {hasEpi && (
+        <div className="grid grid-cols-4 gap-px mb-6" style={{ background: "#E2E5DE" }}>
+          {[
+            { label: "Epi Records", value: records.length },
+            { label: "Countries", value: countryCount },
+            { label: "Hosts", value: hostCount },
+            { label: "Diseases", value: diseaseCount },
+          ].map((m) => (
+            <div key={m.label} className="px-5 py-4" style={{ background: "#FFFFFF" }}>
+              <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#A8A29E" }}>{m.label}</div>
+              <div className="text-3xl font-semibold mt-1" style={{ color: "#1C1917", fontFamily: "monospace" }}>{m.value.toLocaleString()}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* GenBank Section */}
       <div className="mb-6" style={{ background: "#E2E5DE" }}>
@@ -709,6 +713,7 @@ export function SpeciesPage() {
       </div>
 
       {/* Epidemiological Charts */}
+      {hasEpi && (
       <div className="grid grid-cols-2 gap-px mb-6" style={{ background: "#E2E5DE" }}>
         <div style={{ background: "#FFFFFF" }}>
           <div className="px-5 py-3 border-b" style={{ borderColor: "#E2E5DE" }}>
@@ -788,6 +793,7 @@ export function SpeciesPage() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
