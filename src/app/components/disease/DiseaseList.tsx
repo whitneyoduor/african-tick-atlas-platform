@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { fetchEpidemiological, fetchEpidemiologicalMeta, type EpidemiologicalRecord, type EpidemiologicalMeta } from "../../lib/api";
+import { fetchEpidemiological, fetchEpidemiologicalMeta, fetchGenBankStats, type EpidemiologicalRecord, type EpidemiologicalMeta, type GenBankStats } from "../../lib/api";
 import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader } from "../common/Atlas";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -11,6 +11,7 @@ export function DiseaseList() {
   const [loading, setLoading] = useState(true);
   const [selectedLoading, setSelectedLoading] = useState(false);
   const [selected, setSelected] = useState("");
+  const [genbankStats, setGenbankStats] = useState<Map<string, GenBankStats | null>>(new Map());
 
   useEffect(() => {
     let active = true;
@@ -37,6 +38,60 @@ export function DiseaseList() {
       .finally(() => { if (active) setSelectedLoading(false); });
     return () => { active = false; };
   }, [selected]);
+
+  const vectorSpecies = useMemo(() => {
+    if (!selected || records.length === 0) return [];
+    const counts: Record<string, number> = {};
+    records.forEach((r) => { if (r.species) counts[r.species] = (counts[r.species] || 0) + 1; });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count }));
+  }, [records, selected]);
+
+  useEffect(() => {
+    if (!selected || vectorSpecies.length === 0) {
+      setGenbankStats(new Map());
+      return;
+    }
+    let active = true;
+    const speciesList = vectorSpecies.map((s) => s.name);
+    Promise.all(
+      speciesList.map(async (sp) => {
+        try {
+          const stats = await fetchGenBankStats(sp);
+          return [sp, stats] as const;
+        } catch {
+          return [sp, null] as const;
+        }
+      })
+    ).then((results) => {
+      if (!active) return;
+      const map = new Map<string, GenBankStats | null>();
+      for (const [sp, stats] of results) map.set(sp, stats);
+      setGenbankStats(map);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [selected, vectorSpecies]);
+
+  const aggregatedGenBank = useMemo(() => {
+    let totalSequences = 0;
+    let speciesWithData = 0;
+    const geneCounts: Record<string, number> = {};
+    const breakdown: { species: string; count: number }[] = [];
+
+    for (const [sp, st] of genbankStats) {
+      if (!st || st.total === 0) continue;
+      totalSequences += st.total;
+      speciesWithData++;
+      breakdown.push({ species: sp, count: st.total });
+      for (const g of st.genes) geneCounts[g.name] = (geneCounts[g.name] || 0) + g.count;
+    }
+
+    return {
+      totalSequences,
+      speciesWithData,
+      genes: Object.entries(geneCounts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, count]) => ({ name, count })),
+      breakdown: breakdown.sort((a, b) => b.count - a.count),
+    };
+  }, [genbankStats]);
 
   const diseases = useMemo(() => (meta?.diseases || []).filter((d) => d && d.name), [meta]);
 
@@ -193,6 +248,44 @@ export function DiseaseList() {
                   </BarChart>
                 </ResponsiveContainer>
               </Panel>
+
+              {aggregatedGenBank.totalSequences > 0 && (
+                <>
+                  <StatCards
+                    className="grid-cols-2 lg:grid-cols-4"
+                    items={[
+                      { label: "GenBank Sequences", value: aggregatedGenBank.totalSequences },
+                      { label: "Vectors with Sequences", value: aggregatedGenBank.speciesWithData },
+                      { label: "Unique Genes", value: aggregatedGenBank.genes.length },
+                      { label: "Full GenBank View", value: "\u2192", hint: `View all on /diseases/${encodeURIComponent(selected)}` },
+                    ]}
+                  />
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                    <Panel title="GenBank Sequences per Vector">
+                      <ResponsiveContainer width="100%" height={Math.max(220, aggregatedGenBank.breakdown.length * 34)}>
+                        <BarChart data={aggregatedGenBank.breakdown} layout="vertical" margin={{ left: 10, right: 30 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={atlas.grid} horizontal={false} />
+                          <XAxis type="number" tick={{ fontSize: 11, fill: atlas.textMuted, fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: atlas.border }} />
+                          <YAxis type="category" dataKey="species" tick={{ fontSize: 11, fill: atlas.text }} tickLine={false} axisLine={false} width={200} />
+                          <Tooltip contentStyle={tooltipStyle} />
+                          <Bar dataKey="count" fill="#DC2626" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </Panel>
+                    <Panel title="Gene Distribution">
+                      <ResponsiveContainer width="100%" height={Math.max(220, aggregatedGenBank.genes.length * 34)}>
+                        <BarChart data={aggregatedGenBank.genes} layout="vertical" margin={{ left: 10, right: 30 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={atlas.grid} horizontal={false} />
+                          <XAxis type="number" tick={{ fontSize: 11, fill: atlas.textMuted, fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: atlas.border }} />
+                          <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: atlas.text }} tickLine={false} axisLine={false} width={120} />
+                          <Tooltip contentStyle={tooltipStyle} />
+                          <Bar dataKey="count" fill={atlas.teal} radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </Panel>
+                  </div>
+                </>
+              )}
             </>
           ) : (
             <Panel>
