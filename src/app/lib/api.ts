@@ -398,6 +398,44 @@ export function exportAsCSV(records: EpidemiologicalRecord[]): void {
   URL.revokeObjectURL(url);
 }
 
+export interface GenBankRecord {
+  accession: string;
+  organism: string | null;
+  sequenceLength: number | null;
+  gene: string | null;
+  definition: string | null;
+  taxonomy: string[];
+  collectionDate: string | null;
+  country: string | null;
+  location: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  host: string | null;
+}
+
+export interface GenBankMatch {
+  record: GenBankRecord;
+  distanceKm: number | null;
+}
+
+export interface GenBankResponse {
+  species: string;
+  query: { lat: number; lon: number; radiusKm: number } | null;
+  total: number;
+  matched: number;
+  records: GenBankMatch[];
+}
+
+export async function fetchGenBank(species: string, signal?: AbortSignal): Promise<GenBankResponse | null> {
+  try {
+    const res = await fetch(`${API_BASE}/genbank/${encodeURIComponent(species)}`, { signal });
+    if (!res.ok) throw new Error("API error");
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
 export function exportAsGeoJSON(records: Occurrence[]): void {
   const geojson = {
     type: "FeatureCollection",
