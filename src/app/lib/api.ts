@@ -437,6 +437,13 @@ export interface GenBankStats {
   sequenceLength: { min: number; max: number; mean: number } | null;
 }
 
+let genbankStaticCache: Record<string, GenBankResponse> = {};
+let genbankStaticStatsCache: Record<string, GenBankStats> = {};
+
+function genbankSafeName(species: string): string {
+  return species.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+}
+
 export async function fetchGenBank(
   species: string,
   opts?: {
@@ -452,6 +459,63 @@ export async function fetchGenBank(
   }
 ): Promise<GenBankResponse | null> {
   try {
+    if (USE_STATIC) {
+      const safeName = genbankSafeName(species);
+      if (!genbankStaticCache[safeName]) {
+        const res = await fetch(`/genbank/${safeName}.json`);
+        if (!res.ok) return null;
+        genbankStaticCache[safeName] = await res.json();
+      }
+      let data = genbankStaticCache[safeName];
+      if (opts?.gene && opts.gene !== "all") {
+        data = {
+          ...data,
+          records: data.records.filter((m) => m.record.gene === opts.gene),
+        };
+      }
+      if (opts?.search) {
+        const q = opts.search.toLowerCase();
+        data = {
+          ...data,
+          records: data.records.filter(
+            (m) =>
+              m.record.accession.toLowerCase().includes(q) ||
+              (m.record.definition && m.record.definition.toLowerCase().includes(q)) ||
+              (m.record.host && m.record.host.toLowerCase().includes(q)) ||
+              (m.record.location && m.record.location.toLowerCase().includes(q))
+          ),
+        };
+      }
+      const sortBy = opts?.sortBy || "accession";
+      const sortDir = opts?.sortDir || "asc";
+      data = {
+        ...data,
+        records: [...data.records].sort((a, b) => {
+          const av = (a.record as any)[sortBy];
+          const bv = (b.record as any)[sortBy];
+          if (av == null && bv == null) return 0;
+          if (av == null) return 1;
+          if (bv == null) return -1;
+          if (typeof av === "number" && typeof bv === "number") {
+            return sortDir === "desc" ? bv - av : av - bv;
+          }
+          const cmp = String(av).localeCompare(String(bv));
+          return sortDir === "desc" ? -cmp : cmp;
+        }),
+      };
+      const page = opts?.page || 1;
+      const limit = opts?.limit || 20;
+      const start = (page - 1) * limit;
+      return {
+        ...data,
+        total: data.records.length,
+        page,
+        limit,
+        totalPages: Math.ceil(data.records.length / limit),
+        records: data.records.slice(start, start + limit),
+      };
+    }
+
     const qs = new URLSearchParams();
     if (opts?.gene) qs.set("gene", opts.gene);
     if (opts?.search) qs.set("search", opts.search);
@@ -473,6 +537,15 @@ export async function fetchGenBank(
 
 export async function fetchGenBankStats(species: string, signal?: AbortSignal): Promise<GenBankStats | null> {
   try {
+    if (USE_STATIC) {
+      const safeName = genbankSafeName(species);
+      if (!genbankStaticStatsCache[safeName]) {
+        const res = await fetch(`/genbank/${safeName}_stats.json`);
+        if (!res.ok) return null;
+        genbankStaticStatsCache[safeName] = await res.json();
+      }
+      return genbankStaticStatsCache[safeName];
+    }
     const res = await fetch(`${API_BASE}/genbank/stats/${encodeURIComponent(species)}`, { signal });
     if (!res.ok) throw new Error("API error");
     return res.json();

@@ -1,0 +1,1 @@
+{"total":19,"genes":[{"name":"COX1","count":4},{"name":"16S","count":2},{"name":"28S","count":2},{"name":"COI","count":2},{"name":"H3","count":2}],"countries":[{"name":"Benin","count":10},{"name":"Egypt","count":7},{"name":"Nigeria","count":2}],"hosts":[{"name":"Bos taurus","count":7},{"name":"Camel","count":2}],"sequenceLength":{"min":224,"max":660,"mean":507}}

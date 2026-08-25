@@ -1,0 +1,1 @@
+{"total":25,"genes":[{"name":"1","count":6},{"name":"16S","count":3},{"name":"28S","count":3},{"name":"COI","count":3},{"name":"H3","count":3}],"countries":[{"name":"Benin","count":15},{"name":"Cameroon","count":10}],"hosts":[{"name":"cattle","count":1}],"sequenceLength":{"min":248,"max":644,"mean":428}}

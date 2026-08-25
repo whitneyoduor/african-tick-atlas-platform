@@ -1,0 +1,1 @@
+{"total":16,"genes":[{"name":"16S","count":3},{"name":"COX1","count":2}],"countries":[{"name":"Cameroon","count":9},{"name":"Zambia: Isoka","count":3},{"name":"Zambia: Chipata","count":2},{"name":"Uganda","count":1},{"name":"Ethiopia: Oromia, Jimma","count":1}],"hosts":[{"name":"cattle","count":10}],"sequenceLength":{"min":365,"max":646,"mean":421}}

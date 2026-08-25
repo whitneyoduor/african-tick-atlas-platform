@@ -1,0 +1,1 @@
+{"total":20,"genes":[{"name":"16S","count":6},{"name":"12S","count":4}],"countries":[{"name":"Nigeria","count":14},{"name":"Cameroon","count":3},{"name":"Zambia: Mpulungu","count":2},{"name":"Nigeria: Plateau State","count":1}],"hosts":[{"name":"cattle","count":11},{"name":"Bos taurus","count":2}],"sequenceLength":{"min":250,"max":1028,"mean":429}}
