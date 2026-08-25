@@ -8,7 +8,7 @@ import {
   type GenBankMatch,
   type GenBankStats,
 } from "../../lib/api";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import maplibregl from "maplibre-gl";
 
 const NCBI_BASE = "https://www.ncbi.nlm.nih.gov/nuccore/";
@@ -317,7 +317,6 @@ function Pagination({
   );
 }
 
-const CHART_HEIGHT = 240;
 
 export function SpeciesPage() {
   const { name } = useParams<{ name: string }>();
@@ -714,66 +713,83 @@ export function SpeciesPage() {
 
       {/* Epidemiological Charts */}
       {hasEpi && (
-      <div className="grid grid-cols-2 gap-px mb-6" style={{ background: "#E2E5DE" }}>
-        <div style={{ background: "#FFFFFF" }}>
-          <div className="px-5 py-3 border-b" style={{ borderColor: "#E2E5DE" }}>
-            <h3 className="text-sm font-semibold" style={{ color: "#1C1917" }}>Records by Country</h3>
-          </div>
-          <div className="p-3 overflow-hidden" style={{ height: CHART_HEIGHT }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={countryData} layout="vertical" margin={{ left: 0, right: 20, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#EBEDE9" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: "#A8A29E", fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: "#E2E5DE" }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#1C1917" }} tickLine={false} axisLine={false} width={100} />
-                <Tooltip contentStyle={{ borderRadius: 2, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }} />
-                <Bar dataKey="count" fill="#134E4A" radius={[0, 3, 3, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+      <>
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {[
+            { title: "Animal Hosts", data: hostData, color: "#D97706", colors: ["#D97706", "#F59E0B", "#FBBF24", "#FCD34D", "#FDE68A", "#FEF3C7", "#92400E", "#B45309"] },
+            { title: "Associated Diseases", data: diseaseData, color: "#DC2626", colors: ["#DC2626", "#EF4444", "#F87171", "#FCA5A5", "#FECACA", "#7F1D1D", "#B91C1C", "#991B1B"] },
+            { title: "Countries", data: countryData, color: "#134E4A", colors: ["#134E4A", "#0F766E", "#14B8A6", "#2DD4BF", "#5EEAD4", "#99F6E4", "#065F46", "#047857"] },
+          ].map((chart) => (
+            <div key={chart.title} className="rounded-lg overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E2E5DE" }}>
+              <div className="px-4 py-3" style={{ borderBottom: "1px solid #F0F0F0" }}>
+                <h3 className="text-[13px] font-semibold" style={{ color: "#1C1917" }}>{chart.title}</h3>
+              </div>
+              <div className="p-3">
+                {chart.data.length === 0 ? (
+                  <p className="text-xs py-8 text-center" style={{ color: "#A8A29E" }}>No data available</p>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div style={{ width: 160, height: 160 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={chart.data.slice(0, 8)}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={40}
+                            outerRadius={70}
+                            paddingAngle={2}
+                            dataKey="count"
+                            nameKey="name"
+                            strokeWidth={0}
+                          >
+                            {chart.data.slice(0, 8).map((_, i) => (
+                              <Cell key={i} fill={chart.colors[i % chart.colors.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{ borderRadius: 6, border: "1px solid #E2E5DE", fontSize: 11, fontFamily: "monospace", background: "#FFFFFF", padding: "6px 10px" }}
+                            formatter={(value: number, name: string) => [`${value.toLocaleString()} records`, name]}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex-1 space-y-1 min-w-0">
+                      {chart.data.slice(0, 6).map((item, i) => {
+                        const total = chart.data.reduce((s, d) => s + d.count, 0);
+                        const pct = total > 0 ? ((item.count / total) * 100).toFixed(0) : "0";
+                        return (
+                          <div key={item.name} className="flex items-center gap-1.5 text-[11px]">
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: chart.colors[i % chart.colors.length] }} />
+                            <span className="truncate flex-1" style={{ color: "#1C1917" }}>{item.name}</span>
+                            <span className="shrink-0" style={{ color: "#A8A29E", fontFamily: "monospace" }}>{pct}%</span>
+                          </div>
+                        );
+                      })}
+                      {chart.data.length > 6 && (
+                        <div className="text-[10px]" style={{ color: "#A8A29E" }}>+{chart.data.length - 6} more</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
-        <div style={{ background: "#FFFFFF" }}>
-          <div className="px-5 py-3 border-b" style={{ borderColor: "#E2E5DE" }}>
-            <h3 className="text-sm font-semibold" style={{ color: "#1C1917" }}>Animal Hosts</h3>
+
+        <div className="rounded-lg overflow-hidden mb-6" style={{ background: "#FFFFFF", border: "1px solid #E2E5DE" }}>
+          <div className="px-5 py-3" style={{ borderBottom: "1px solid #F0F0F0" }}>
+            <h3 className="text-[13px] font-semibold" style={{ color: "#1C1917" }}>Records Over Time</h3>
           </div>
-          <div className="p-3 overflow-hidden" style={{ height: CHART_HEIGHT }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={hostData} layout="vertical" margin={{ left: 0, right: 20, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#EBEDE9" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: "#A8A29E", fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: "#E2E5DE" }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#1C1917" }} tickLine={false} axisLine={false} width={100} />
-                <Tooltip contentStyle={{ borderRadius: 2, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }} />
-                <Bar dataKey="count" fill="#D97706" radius={[0, 3, 3, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        <div style={{ background: "#FFFFFF" }}>
-          <div className="px-5 py-3 border-b" style={{ borderColor: "#E2E5DE" }}>
-            <h3 className="text-sm font-semibold" style={{ color: "#1C1917" }}>Associated Diseases</h3>
-          </div>
-          <div className="p-3 overflow-hidden" style={{ height: CHART_HEIGHT }}>
-            {diseaseData.length === 0 ? (
-              <p className="text-sm py-4 text-center" style={{ color: "#A8A29E" }}>No disease data recorded for this species</p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={diseaseData} layout="vertical" margin={{ left: 0, right: 20, top: 5, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#EBEDE9" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: "#A8A29E", fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: "#E2E5DE" }} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "#1C1917" }} tickLine={false} axisLine={false} width={140} />
-                  <Tooltip contentStyle={{ borderRadius: 2, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }} />
-                  <Bar dataKey="count" fill="#DC2626" radius={[0, 3, 3, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-        <div style={{ background: "#FFFFFF" }}>
-          <div className="px-5 py-3 border-b" style={{ borderColor: "#E2E5DE" }}>
-            <h3 className="text-sm font-semibold" style={{ color: "#1C1917" }}>Records Over Time</h3>
-          </div>
-          <div className="p-3 overflow-hidden" style={{ height: CHART_HEIGHT }}>
+          <div className="p-3" style={{ height: 220 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={yearlyData} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="timeGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0F766E" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#134E4A" stopOpacity={0.8} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#EBEDE9" vertical={false} />
                 <XAxis
                   dataKey="year"
@@ -786,13 +802,13 @@ export function SpeciesPage() {
                   height={yearlyData.length > 20 ? 40 : 25}
                 />
                 <YAxis tick={{ fontSize: 11, fill: "#A8A29E", fontFamily: "monospace" }} tickLine={false} axisLine={false} width={40} />
-                <Tooltip contentStyle={{ borderRadius: 2, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }} />
-                <Bar dataKey="count" fill="#134E4A" radius={[3, 3, 0, 0]} maxBarSize={20} />
+                <Tooltip contentStyle={{ borderRadius: 6, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }} />
+                <Bar dataKey="count" fill="url(#timeGrad)" radius={[3, 3, 0, 0]} maxBarSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
+      </>
       )}
     </div>
   );
