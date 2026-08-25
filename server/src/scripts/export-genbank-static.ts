@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 
 const p = new PrismaClient();
-const OUT_DIR = path.resolve("../../public/genbank");
+const OUT_DIR = path.resolve(import.meta.dirname, "../../../public/genbank");
 
 async function main() {
   if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });

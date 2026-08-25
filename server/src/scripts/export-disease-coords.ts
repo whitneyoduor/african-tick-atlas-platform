@@ -64,7 +64,7 @@ async function main() {
     }
   }
 
-  const outDir = join(process.cwd(), "public", "genbank");
+  const outDir = join(import.meta.dirname, "../../../public", "genbank");
   if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
   const outPath = join(outDir, "disease-coordinates.json");
   writeFileSync(outPath, JSON.stringify(result));
