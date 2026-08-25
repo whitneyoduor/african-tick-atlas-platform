@@ -398,6 +398,48 @@ export function exportAsCSV(records: EpidemiologicalRecord[]): void {
   URL.revokeObjectURL(url);
 }
 
+export interface DiseaseCoordinatePoint {
+  lat: number;
+  lng: number;
+}
+
+export interface DiseaseCoordinateEntry {
+  points: DiseaseCoordinatePoint[];
+  species: string[];
+  totalPoints: number;
+}
+
+export type DiseaseCoordinatesMap = Record<string, DiseaseCoordinateEntry>;
+
+let diseaseCoordsCache: DiseaseCoordinatesMap | null = null;
+
+export async function fetchDiseaseCoordinates(signal?: AbortSignal): Promise<DiseaseCoordinatesMap> {
+  if (diseaseCoordsCache) return diseaseCoordsCache;
+
+  if (USE_STATIC) {
+    try {
+      const res = await fetch("/genbank/disease-coordinates.json");
+      if (res.ok) {
+        diseaseCoordsCache = await res.json();
+        return diseaseCoordsCache!;
+      }
+    } catch {}
+    diseaseCoordsCache = {};
+    return diseaseCoordsCache;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/epidemiological/meta/disease-coordinates`, { signal });
+    if (!res.ok) throw new Error("API error");
+    const json = await res.json();
+    diseaseCoordsCache = json.data;
+    return diseaseCoordsCache!;
+  } catch {
+    diseaseCoordsCache = {};
+    return diseaseCoordsCache;
+  }
+}
+
 export interface GenBankRecord {
   id: number;
   accession: string;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { fetchEpidemiological, fetchEpidemiologicalMeta, type EpidemiologicalRecord, type EpidemiologicalMeta } from "../../lib/api";
+import { fetchEpidemiological, fetchEpidemiologicalMeta, fetchDiseaseCoordinates, type EpidemiologicalRecord, type EpidemiologicalMeta, type DiseaseCoordinatesMap } from "../../lib/api";
 import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader } from "../common/Atlas";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import maplibregl from "maplibre-gl";
@@ -29,50 +29,26 @@ function getDiseaseColor(name: string): string {
   return palette[Math.abs(hash) % palette.length];
 }
 
-const COUNTRY_CENTROIDS: Record<string, [number, number]> = {
-  "Algeria": [3.0, 28.0], "Angola": [18.5, -12.5], "Benin": [2.3, 9.3],
-  "Botswana": [24.5, -22.0], "Burkina Faso": [-1.5, 12.3], "Burundi": [29.9, -3.4],
-  "Cameroon": [12.4, 6.0], "Central African Republic": [20.9, 6.6],
-  "Chad": [18.7, 15.5], "Congo": [15.8, -0.2], "Cote d'Ivoire": [-5.5, 7.5],
-  "DRC": [23.6, -4.0], "Djibouti": [43.1, 11.6], "Egypt": [30.8, 26.8],
-  "Equatorial Guinea": [10.5, 1.7], "Eritrea": [39.8, 15.2], "Eswatini": [31.5, -26.5],
-  "Ethiopia": [38.7, 9.1], "Gabon": [11.6, -0.8], "Gambia": [-15.5, 13.4],
-  "Ghana": [-1.0, 7.9], "Guinea": [-11.7, 10.5], "Guinea-Bissau": [-15.2, 12.0],
-  "Kenya": [37.9, 0.0], "Lesotho": [29.5, -29.6], "Liberia": [-9.4, 6.4],
-  "Libya": [17.2, 26.3], "Madagascar": [46.9, -18.8], "Malawi": [34.3, -13.3],
-  "Mali": [-4.0, 17.6], "Mauritania": [-10.9, 19.8], "Morocco": [-7.1, 31.8],
-  "Mozambique": [35.5, -18.3], "Namibia": [18.5, -22.6], "Niger": [8.1, 17.6],
-  "Nigeria": [8.7, 9.1], "Rwanda": [29.9, -1.9], "Sao Tome": [6.6, 0.2],
-  "Senegal": [-14.5, 14.5], "Sierra Leone": [-11.8, 8.5], "Somalia": [46.2, 5.2],
-  "South Africa": [25.0, -29.0], "South Sudan": [30.0, 7.0],
-  "Sudan": [30.2, 12.9], "Tanzania": [34.9, -6.4], "Togo": [1.2, 8.6],
-  "Tunisia": [9.5, 33.9], "Uganda": [32.3, 1.4], "Zambia": [28.3, -15.4],
-  "Zimbabwe": [29.9, -19.0], "Cape Verde": [-23.6, 16.0], "Comoros": [44.3, -12.2],
-  "Mauritius": [57.6, -20.3], "Seychelles": [55.5, -4.7], "Reunion": [55.5, -21.1],
-  "Western Sahara": [-12.5, 24.5], "Mayotte": [45.1, -12.8],
-  "Swaziland": [31.5, -26.5], "Dem. Rep. Congo": [23.6, -4.0],
-  "Republic of the Congo": [15.8, -0.2], "United Republic of Tanzania": [34.9, -6.4],
-};
-
-function DiseaseMiniMap({ records }: { records: EpidemiologicalRecord[] }) {
+function DiseaseMiniMap({ records, diseaseCoords }: { records: EpidemiologicalRecord[]; diseaseCoords: DiseaseCoordinatesMap }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const countryCounts: Record<string, number> = {};
-    records.forEach((r) => { if (r.country) countryCounts[r.country] = (countryCounts[r.country] || 0) + 1; });
-
     const features: GeoJSON.Feature[] = [];
-    for (const [country, count] of Object.entries(countryCounts)) {
-      const coords = COUNTRY_CENTROIDS[country];
-      if (!coords) continue;
-      features.push({
-        type: "Feature",
-        geometry: { type: "Point", coordinates: coords },
-        properties: { country, count },
-      });
+    for (const r of records) {
+      const disease = r.epidemiologicalDisease;
+      if (!disease) continue;
+      const entry = diseaseCoords[disease];
+      if (!entry || entry.points.length === 0) continue;
+      for (const pt of entry.points) {
+        features.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [pt.lng, pt.lat] },
+          properties: { disease, species: r.species || "" },
+        });
+      }
     }
 
     if (features.length === 0) return;
@@ -97,7 +73,7 @@ function DiseaseMiniMap({ records }: { records: EpidemiologicalRecord[] }) {
         type: "heatmap",
         source: "disease-points",
         paint: {
-          "heatmap-weight": ["get", "count"],
+          "heatmap-weight": 1,
           "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 1, 6, 3],
           "heatmap-color": [
             "interpolate", ["linear"], ["heatmap-density"],
@@ -114,34 +90,34 @@ function DiseaseMiniMap({ records }: { records: EpidemiologicalRecord[] }) {
       });
 
       map.addLayer({
-        id: "disease-points",
+        id: "disease-circles",
         type: "circle",
         source: "disease-points",
         paint: {
-          "circle-radius": ["interpolate", ["linear"], ["get", "count"], 1, 4, 50, 12, 500, 20],
+          "circle-radius": 5,
           "circle-color": "#0F766E",
           "circle-stroke-color": "#FFFFFF",
           "circle-stroke-width": 1.5,
-          "circle-opacity": 0.9,
+          "circle-opacity": 0.85,
         },
       });
 
-      const popup = new maplibregl.Popup({ closeButton: false, maxWidth: "200px" });
-      map.on("mouseenter", "disease-points", (e) => {
+      const popup = new maplibregl.Popup({ closeButton: false, maxWidth: "220px" });
+      map.on("mouseenter", "disease-circles", (e) => {
         map.getCanvas().style.cursor = "pointer";
         const f = e.features?.[0];
         if (!f) return;
         popup
-          .setHTML(`<div style="font-family:system-ui;font-size:12px;line-height:1.5"><div style="font-weight:600">${f.properties?.country}</div><div style="color:#0F766E;font-family:monospace">${f.properties?.count} records</div></div>`)
+          .setHTML(`<div style="font-family:system-ui;font-size:12px;line-height:1.5"><div style="font-weight:600">${f.properties?.species || "Tick species"}</div><div style="color:#0F766E;font-family:monospace;font-size:11px">${f.properties?.disease || ""}</div></div>`)
           .setLngLat(e.lngLat)
           .addTo(map);
       });
-      map.on("mouseleave", "disease-points", () => { map.getCanvas().style.cursor = ""; popup.remove(); });
+      map.on("mouseleave", "disease-circles", () => { map.getCanvas().style.cursor = ""; popup.remove(); });
     });
 
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; };
-  }, [records]);
+  }, [records, diseaseCoords]);
 
   return <div ref={containerRef} className="w-full h-full min-h-[300px]" />;
 }
@@ -153,6 +129,7 @@ export function DiseaseList() {
   const [loading, setLoading] = useState(true);
   const [selectedLoading, setSelectedLoading] = useState(false);
   const [selected, setSelected] = useState("");
+  const [diseaseCoords, setDiseaseCoords] = useState<DiseaseCoordinatesMap>({});
 
   useEffect(() => {
     let active = true;
@@ -161,6 +138,7 @@ export function DiseaseList() {
       setMeta(m);
       setLoading(false);
     });
+    fetchDiseaseCoordinates().then((dc) => { if (active) setDiseaseCoords(dc); }).catch(() => {});
     return () => { active = false; };
   }, []);
 
@@ -298,7 +276,7 @@ export function DiseaseList() {
 
               <Panel title="Geographic Distribution" className="mb-6">
                 <div style={{ height: 360 }}>
-                  <DiseaseMiniMap records={records} />
+                  <DiseaseMiniMap records={records} diseaseCoords={diseaseCoords} />
                 </div>
               </Panel>
 

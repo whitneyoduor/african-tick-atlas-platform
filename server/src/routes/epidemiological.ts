@@ -211,6 +211,72 @@ epidemiologicalRouter.get("/meta/species-detail", async (_req: Request, res: Res
   }
 });
 
+epidemiologicalRouter.get("/meta/disease-coordinates", async (_req: Request, res: Response) => {
+  try {
+    const epiRecords = await prisma.epidemiologicalRecord.findMany({
+      where: {
+        epidemiologicalDisease: { not: null },
+        species: { not: null },
+      },
+      select: { epidemiologicalDisease: true, species: true },
+    });
+
+    const diseaseSpeciesMap = new Map<string, Set<string>>();
+    for (const r of epiRecords) {
+      const disease = r.epidemiologicalDisease!.trim();
+      const species = r.species!.trim();
+      if (!diseaseSpeciesMap.has(disease)) {
+        diseaseSpeciesMap.set(disease, new Set());
+      }
+      diseaseSpeciesMap.get(disease)!.add(species);
+    }
+
+    const allSpecies = [...new Set(epiRecords.map(r => r.species!.trim()))];
+    const occurrences = await prisma.occurrence.findMany({
+      where: {
+        species: { in: allSpecies },
+        latitude: { not: null },
+        longitude: { not: null },
+      },
+      select: { species: true, latitude: true, longitude: true },
+    });
+
+    const speciesCoordsMap = new Map<string, { lat: number; lng: number }[]>();
+    for (const o of occurrences) {
+      const sp = o.species!.trim();
+      if (!speciesCoordsMap.has(sp)) {
+        speciesCoordsMap.set(sp, []);
+      }
+      speciesCoordsMap.get(sp)!.push({ lat: o.latitude!, lng: o.longitude! });
+    }
+
+    const result: Record<string, { points: { lat: number; lng: number }[]; species: string[]; totalPoints: number }> = {};
+    for (const [disease, speciesSet] of diseaseSpeciesMap) {
+      const allPoints: { lat: number; lng: number }[] = [];
+      const speciesList: string[] = [];
+      for (const sp of speciesSet) {
+        const coords = speciesCoordsMap.get(sp);
+        if (coords && coords.length > 0) {
+          allPoints.push(...coords);
+          speciesList.push(sp);
+        }
+      }
+      if (allPoints.length > 0) {
+        result[disease] = {
+          points: allPoints,
+          species: speciesList,
+          totalPoints: allPoints.length,
+        };
+      }
+    }
+
+    res.json({ data: result });
+  } catch (error) {
+    console.error("Error building disease coordinates:", error);
+    res.status(500).json({ error: "Failed to build disease coordinates" });
+  }
+});
+
 epidemiologicalRouter.get("/:id", async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string, 10);
