@@ -32,7 +32,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           maplibre: ['maplibre-gl'],
-          charts: ['recharts'],
         },
       },
     },
