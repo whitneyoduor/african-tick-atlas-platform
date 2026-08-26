@@ -8,7 +8,7 @@ import {
   type GenBankMatch,
   type GenBankStats,
 } from "../../lib/api";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Treemap } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import maplibregl from "maplibre-gl";
 
 const NCBI_BASE = "https://www.ncbi.nlm.nih.gov/nuccore/";
@@ -218,62 +218,6 @@ function GeneBadge({ gene }: { gene: string | null }) {
     >
       {gene}
     </span>
-  );
-}
-
-const GENBANK_HOST_COLORS = [
-  "#B45309", "#D97706", "#F59E0B", "#92400E",
-  "#FBBF24", "#78350F", "#FCD34D", "#451A03",
-];
-
-function HostTreemapContent(props: any) {
-  const { x, y, width, height, name, count, index, colors } = props;
-  if (!width || !height || width < 12 || height < 12) return null;
-  const fill = colors ? colors[index % colors.length] : "#D97706";
-  return (
-    <g>
-      <rect
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-        fill={fill}
-        stroke="#FFFFFF"
-        strokeWidth={2}
-        rx={3}
-      />
-      {width > 55 && height > 28 && (
-        <>
-          <text
-            x={x + width / 2}
-            y={y + height / 2 - 4}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fill="#FFFFFF"
-            fontSize={11}
-            fontWeight={600}
-            fontFamily="system-ui"
-          >
-            {name && name.length > Math.floor(width / 7)
-              ? name.slice(0, Math.floor(width / 7)) + "\u2026"
-              : name}
-          </text>
-          {count != null && (
-            <text
-              x={x + width / 2}
-              y={y + height / 2 + 12}
-              textAnchor="middle"
-              dominantBaseline="central"
-              fill="rgba(255,255,255,0.85)"
-              fontSize={10}
-              fontFamily="monospace"
-            >
-              {count}
-            </text>
-          )}
-        </>
-      )}
-    </g>
   );
 }
 
@@ -682,66 +626,98 @@ export function SpeciesPage() {
                         </div>
                       </div>
 
-                      {/* Countries — Bar Chart */}
+                      {/* Countries — Pie */}
                       <div className="rounded-lg overflow-hidden" style={{ border: "1px solid #E2E5DE", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                         <div className="px-4 py-3" style={{ borderBottom: "1px solid #F0F0F0" }}>
                           <h5 className="text-xs font-semibold" style={{ color: "#1C1917" }}>Molecular Data by Country</h5>
                           <p className="text-[11px] mt-0.5" style={{ color: "#A8A29E" }}>Geographic distribution of GenBank submissions</p>
                         </div>
-                        <div className="p-4" style={{ height: 260 }}>
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={genbankStats.countries.slice(0, 10)} layout="vertical" margin={{ left: 0, right: 20, top: 5, bottom: 5 }}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#EBEDE9" horizontal={false} />
-                              <XAxis type="number" tick={{ fontSize: 11, fill: "#A8A29E", fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: "#E2E5DE" }} />
-                              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#1C1917" }} tickLine={false} axisLine={false} width={130} />
-                              <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }} />
-                              <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={18}>
-                                {genbankStats.countries.slice(0, 10).map((_, i) => (
-                                  <Cell key={i} fill={["#2563EB", "#3B82F6", "#60A5FA", "#93C5FD", "#BFDBFE", "#1D4ED8", "#1E40AF", "#60A5FA", "#3B82F6", "#93C5FD"][i % 10]} />
-                                ))}
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
+                        <div className="p-4">
+                          <div className="flex items-center gap-4">
+                            <div style={{ width: 160, height: 160, flexShrink: 0 }}>
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                  <Pie
+                                    data={genbankStats.countries.slice(0, 8)}
+                                    cx="50%" cy="50%"
+                                    innerRadius={40} outerRadius={70}
+                                    paddingAngle={2}
+                                    dataKey="count" nameKey="name"
+                                    strokeWidth={0}
+                                  >
+                                    {genbankStats.countries.slice(0, 8).map((_, i) => (
+                                      <Cell key={i} fill={["#2563EB", "#F59E0B", "#DC2626", "#059669", "#7C3AED", "#EC4899", "#0891B2", "#EA580C"][i % 8]} />
+                                    ))}
+                                  </Pie>
+                                  <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }} />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            </div>
+                            <div className="flex-1 space-y-1.5 min-w-0">
+                              {genbankStats.countries.slice(0, 7).map((c, i) => {
+                                const pct = genbankStats.total > 0 ? ((c.count / genbankStats.total) * 100).toFixed(1) : "0";
+                                return (
+                                  <div key={c.name} className="flex items-center gap-2 text-[11px]">
+                                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ["#2563EB", "#F59E0B", "#DC2626", "#059669", "#7C3AED", "#EC4899", "#0891B2", "#EA580C"][i % 8] }} />
+                                    <span className="truncate flex-1" style={{ color: "#1C1917" }}>{c.name}</span>
+                                    <span className="shrink-0 font-medium" style={{ color: "#57534E", fontFamily: "monospace" }}>{c.count}</span>
+                                    <span className="shrink-0" style={{ color: "#A8A29E", fontFamily: "monospace", fontSize: 10 }}>{pct}%</span>
+                                  </div>
+                                );
+                              })}
+                              {genbankStats.countries.length > 7 && (
+                                <div className="text-[10px]" style={{ color: "#A8A29E" }}>+{genbankStats.countries.length - 7} more</div>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Hosts — Treemap */}
+                      {/* Hosts — Pie */}
                       <div className="rounded-lg overflow-hidden" style={{ border: "1px solid #E2E5DE", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                         <div className="px-4 py-3" style={{ borderBottom: "1px solid #F0F0F0" }}>
                           <h5 className="text-xs font-semibold" style={{ color: "#1C1917" }}>Host Organisms from GenBank</h5>
                           <p className="text-[11px] mt-0.5" style={{ color: "#A8A29E" }}>Hosts from which this tick species was collected</p>
                         </div>
-                        <div className="p-4 overflow-hidden" style={{ height: 260 }}>
+                        <div className="p-4">
                           {genbankStats.hosts.length === 0 ? (
                             <p className="text-xs py-12 text-center" style={{ color: "#A8A29E" }}>No host data available</p>
                           ) : (
-                            <div className="flex items-center gap-3">
-                              <div style={{ width: 180, height: 180, flexShrink: 0 }}>
+                            <div className="flex items-center gap-4">
+                              <div style={{ width: 160, height: 160, flexShrink: 0 }}>
                                 <ResponsiveContainer width="100%" height="100%">
-                                  <Treemap
-                                    data={genbankStats.hosts.slice(0, 8)}
-                                    dataKey="count"
-                                    ratio={4 / 3}
-                                    stroke="#FFFFFF"
-                                    content={<HostTreemapContent colors={GENBANK_HOST_COLORS} />}
-                                  />
+                                  <PieChart>
+                                    <Pie
+                                      data={genbankStats.hosts.slice(0, 8)}
+                                      cx="50%" cy="50%"
+                                      innerRadius={40} outerRadius={70}
+                                      paddingAngle={2}
+                                      dataKey="count" nameKey="name"
+                                      strokeWidth={0}
+                                    >
+                                      {genbankStats.hosts.slice(0, 8).map((_, i) => (
+                                        <Cell key={i} fill={["#B45309", "#DC2626", "#2563EB", "#059669", "#7C3AED", "#EC4899", "#0891B2", "#CA8A04"][i % 8]} />
+                                      ))}
+                                    </Pie>
+                                    <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }} />
+                                  </PieChart>
                                 </ResponsiveContainer>
                               </div>
                               <div className="flex-1 space-y-1.5 min-w-0">
-                                {genbankStats.hosts.slice(0, 6).map((host, i) => {
-                                  const total = genbankStats.hosts.reduce((s, h) => s + h.count, 0);
-                                  const pct = total > 0 ? ((host.count / total) * 100).toFixed(1) : "0";
+                                {genbankStats.hosts.slice(0, 7).map((h, i) => {
+                                  const total = genbankStats.hosts.reduce((s, x) => s + x.count, 0);
+                                  const pct = total > 0 ? ((h.count / total) * 100).toFixed(1) : "0";
                                   return (
-                                    <div key={host.name} className="flex items-center gap-2 text-[11px]">
-                                      <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: GENBANK_HOST_COLORS[i % GENBANK_HOST_COLORS.length] }} />
-                                      <span className="truncate flex-1" style={{ color: "#1C1917" }}>{host.name}</span>
-                                      <span className="shrink-0 font-medium" style={{ color: "#57534E", fontFamily: "monospace" }}>{host.count}</span>
+                                    <div key={h.name} className="flex items-center gap-2 text-[11px]">
+                                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ["#B45309", "#DC2626", "#2563EB", "#059669", "#7C3AED", "#EC4899", "#0891B2", "#CA8A04"][i % 8] }} />
+                                      <span className="truncate flex-1" style={{ color: "#1C1917" }}>{h.name}</span>
+                                      <span className="shrink-0 font-medium" style={{ color: "#57534E", fontFamily: "monospace" }}>{h.count}</span>
                                       <span className="shrink-0" style={{ color: "#A8A29E", fontFamily: "monospace", fontSize: 10 }}>{pct}%</span>
                                     </div>
                                   );
                                 })}
-                                {genbankStats.hosts.length > 6 && (
-                                  <div className="text-[10px]" style={{ color: "#A8A29E" }}>+{genbankStats.hosts.length - 6} more</div>
+                                {genbankStats.hosts.length > 7 && (
+                                  <div className="text-[10px]" style={{ color: "#A8A29E" }}>+{genbankStats.hosts.length - 7} more</div>
                                 )}
                               </div>
                             </div>
@@ -752,23 +728,23 @@ export function SpeciesPage() {
                       {/* Avg Sequence Length by Gene — Bar */}
                       <div className="rounded-lg overflow-hidden" style={{ border: "1px solid #E2E5DE", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                         <div className="px-4 py-3" style={{ borderBottom: "1px solid #F0F0F0" }}>
-                          <h5 className="text-xs font-semibold" style={{ color: "#1C1917" }}>Sequence Length by Species (avg bp)</h5>
+                          <h5 className="text-xs font-semibold" style={{ color: "#1C1917" }}>Sequence Length by Gene (avg bp)</h5>
                           <p className="text-[11px] mt-0.5" style={{ color: "#A8A29E" }}>Mean base pairs per gene target</p>
                         </div>
                         <div className="p-4" style={{ height: 260 }}>
                           {genbankStats.geneAvgLength && genbankStats.geneAvgLength.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={genbankStats.geneAvgLength.slice(0, 10)} layout="vertical" margin={{ left: 0, right: 30, top: 5, bottom: 5 }}>
+                              <BarChart data={genbankStats.geneAvgLength.slice(0, 8)} layout="vertical" margin={{ left: 10, right: 30, top: 5, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#EBEDE9" horizontal={false} />
                                 <XAxis type="number" tick={{ fontSize: 11, fill: "#A8A29E", fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: "#E2E5DE" }} />
-                                <YAxis type="category" dataKey="gene" tick={{ fontSize: 11, fill: "#1C1917" }} tickLine={false} axisLine={false} width={110} />
+                                <YAxis type="category" dataKey="gene" tick={{ fontSize: 11, fill: "#1C1917" }} tickLine={false} axisLine={false} width={100} />
                                 <Tooltip
                                   contentStyle={{ borderRadius: 8, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }}
                                   formatter={(value: number) => [`${value.toLocaleString()} bp`, "Avg Length"]}
                                 />
-                                <Bar dataKey="avgBp" radius={[0, 4, 4, 0]} maxBarSize={18}>
-                                  {genbankStats.geneAvgLength.slice(0, 10).map((_, i) => (
-                                    <Cell key={i} fill={["#D97706", "#F59E0B", "#B45309", "#FBBF24", "#92400E", "#FCD34D", "#78350F", "#451A03", "#D97706", "#F59E0B"][i % 10]} />
+                                <Bar dataKey="avgBp" radius={[0, 4, 4, 0]} maxBarSize={20}>
+                                  {genbankStats.geneAvgLength.slice(0, 8).map((_, i) => (
+                                    <Cell key={i} fill={["#D97706", "#2563EB", "#059669", "#DC2626", "#7C3AED", "#0891B2", "#EC4899", "#CA8A04"][i % 8]} />
                                   ))}
                                 </Bar>
                               </BarChart>
@@ -950,9 +926,9 @@ export function SpeciesPage() {
           <div className="px-5 py-3" style={{ borderBottom: "1px solid #F0F0F0" }}>
             <h3 className="text-[13px] font-semibold" style={{ color: "#1C1917" }}>Records Over Time</h3>
           </div>
-          <div className="p-3" style={{ height: 220 }}>
+          <div className="p-4" style={{ height: 280 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={yearlyData} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
+              <BarChart data={yearlyData} margin={{ left: 0, right: 10, top: 10, bottom: 5 }}>
                 <defs>
                   <linearGradient id="timeGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#0F766E" stopOpacity={1} />
@@ -965,14 +941,21 @@ export function SpeciesPage() {
                   tick={{ fontSize: 10, fill: "#A8A29E", fontFamily: "monospace" }}
                   tickLine={false}
                   axisLine={{ stroke: "#E2E5DE" }}
-                  interval={yearlyData.length > 15 ? Math.floor(yearlyData.length / 8) : 0}
-                  angle={yearlyData.length > 20 ? -45 : 0}
-                  textAnchor={yearlyData.length > 20 ? "end" : "middle"}
-                  height={yearlyData.length > 20 ? 40 : 25}
+                  interval="preserveStartEnd"
+                  minTickGap={40}
                 />
-                <YAxis tick={{ fontSize: 11, fill: "#A8A29E", fontFamily: "monospace" }} tickLine={false} axisLine={false} width={40} />
-                <Tooltip contentStyle={{ borderRadius: 6, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }} />
-                <Bar dataKey="count" fill="url(#timeGrad)" radius={[3, 3, 0, 0]} maxBarSize={20} />
+                <YAxis
+                  tick={{ fontSize: 11, fill: "#A8A29E", fontFamily: "monospace" }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={40}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{ borderRadius: 8, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }}
+                  formatter={(value: number) => [`${value.toLocaleString()} records`, "Count"]}
+                />
+                <Bar dataKey="count" fill="url(#timeGrad)" radius={[3, 3, 0, 0]} maxBarSize={28} />
               </BarChart>
             </ResponsiveContainer>
           </div>
