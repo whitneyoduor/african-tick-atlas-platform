@@ -641,6 +641,46 @@ export async function fetchGenBankStats(species: string, signal?: AbortSignal): 
   }
 }
 
+export interface SpeciesByCountryEntry {
+  species: string;
+  occurrences: number;
+  epiRecords: number;
+  totalRecords: number;
+}
+
+export interface SpeciesByCountryData {
+  countries: Record<string, SpeciesByCountryEntry[]>;
+  allCountries: string[];
+}
+
+let speciesByCountryCache: SpeciesByCountryData | null = null;
+
+export async function fetchSpeciesByCountry(): Promise<SpeciesByCountryData> {
+  if (speciesByCountryCache) return speciesByCountryCache;
+
+  if (USE_STATIC) {
+    try {
+      const res = await fetch("/locations/species-by-country.json");
+      if (res.ok) {
+        speciesByCountryCache = await res.json();
+        return speciesByCountryCache!;
+      }
+    } catch {}
+    speciesByCountryCache = { countries: {}, allCountries: [] };
+    return speciesByCountryCache;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/locations/species-by-country`);
+    if (!res.ok) throw new Error("API error");
+    speciesByCountryCache = await res.json();
+    return speciesByCountryCache!;
+  } catch {
+    speciesByCountryCache = { countries: {}, allCountries: [] };
+    return speciesByCountryCache;
+  }
+}
+
 export function exportAsGeoJSON(records: Occurrence[]): void {
   const geojson = {
     type: "FeatureCollection",
