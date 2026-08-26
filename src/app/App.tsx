@@ -11,7 +11,6 @@ const DiseasePage = lazy(() => import("./components/disease/DiseasePage").then(m
 const EnvironmentalLayers = lazy(() => import("./components/environmental/EnvironmentalLayers").then(m => ({ default: m.EnvironmentalLayers })));
 const Downloads = lazy(() => import("./components/downloads/Downloads").then(m => ({ default: m.Downloads })));
 const About = lazy(() => import("./components/about/About").then(m => ({ default: m.About })));
-const LocationQuery = lazy(() => import("./components/locations/LocationQuery").then(m => ({ default: m.LocationQuery })));
 
 function SpeciesPageWrapper() {
   const { name } = useParams();
@@ -40,7 +39,6 @@ export default function App() {
           <Route path="environmental" element={<Suspense fallback={<Loading />}><EnvironmentalLayers /></Suspense>} />
           <Route path="downloads" element={<Suspense fallback={<Loading />}><Downloads /></Suspense>} />
           <Route path="about" element={<Suspense fallback={<Loading />}><About /></Suspense>} />
-          <Route path="locations" element={<Suspense fallback={<Loading />}><LocationQuery /></Suspense>} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

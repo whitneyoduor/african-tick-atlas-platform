@@ -5,7 +5,6 @@ const navItems = [
   { path: "/", label: "Maps" },
   { path: "/trends", label: "Trends" },
   { path: "/species", label: "Species" },
-  { path: "/locations", label: "Locations" },
   { path: "/diseases", label: "Diseases" },
   { path: "/environmental", label: "Environment" },
   { path: "/downloads", label: "Downloads" },
