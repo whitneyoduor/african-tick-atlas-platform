@@ -272,15 +272,6 @@ export function SpeciesList() {
                     </div>
                   )}
                 </div>
-                <div className="mt-3 text-right">
-                  <button
-                    onClick={() => navigate(`/species/${encodeURIComponent(selected)}`)}
-                    className="text-[12px] font-medium hover:underline"
-                    style={{ color: atlas.teal }}
-                  >
-                    View full species page →
-                  </button>
-                </div>
               </>
             ) : (
               <p className="text-[13px] py-6 text-center" style={{ color: atlas.textMuted }}>
