@@ -8,15 +8,17 @@ const OUT_DIR = path.resolve(import.meta.dirname, "../../../public/locations");
 const AFRICAN_COUNTRIES = new Set([
   "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi",
   "Cabo Verde", "Cameroon", "Central African Republic", "Chad", "Comoros",
-  "Congo", "Congo, Democratic Republic of the", "Côte d'Ivoire",
-  "Djibouti", "Egypt", "Equatorial Guinea", "Eritrea", "Eswatini",
+  "Congo", "Congo, Democratic Republic of the", "Democratic Republic of the Congo",
+  "Côte d'Ivoire", "Ivory Coast",
+  "Djibouti", "Egypt", "Equatorial Guinea", "Eritrea", "Eswatini", "Swaziland",
   "Ethiopia", "Gabon", "Gambia", "Ghana", "Guinea", "Guinea-Bissau",
   "Kenya", "Lesotho", "Liberia", "Libya", "Madagascar", "Malawi",
   "Mali", "Mauritania", "Mauritius", "Mayotte", "Morocco", "Mozambique",
   "Namibia", "Niger", "Nigeria", "Réunion", "Rwanda",
   "Sao Tome and Principe", "Senegal", "Seychelles", "Sierra Leone",
   "Somalia", "South Africa", "South Sudan", "Sudan",
-  "Tanzania, United Republic of", "Togo", "Tunisia", "Uganda",
+  "Tanzania, United Republic of", "United Republic of Tanzania",
+  "Togo", "Tunisia", "Uganda",
   "Western Sahara", "Zambia", "Zimbabwe",
 ]);
 

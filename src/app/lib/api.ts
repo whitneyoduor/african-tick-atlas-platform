@@ -1,6 +1,31 @@
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
 const USE_STATIC = !import.meta.env.VITE_API_URL && import.meta.env.PROD;
 
+export const AFRICAN_COUNTRIES = new Set([
+  "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi",
+  "Cabo Verde", "Cameroon", "Central African Republic", "Chad", "Comoros",
+  "Congo", "Congo, Democratic Republic of the", "Democratic Republic of the Congo",
+  "Côte d'Ivoire", "Ivory Coast",
+  "Djibouti", "Egypt", "Equatorial Guinea", "Eritrea", "Eswatini", "Swaziland",
+  "Ethiopia", "Gabon", "Gambia", "Ghana", "Guinea", "Guinea-Bissau",
+  "Kenya", "Lesotho", "Liberia", "Libya", "Madagascar", "Malawi",
+  "Mali", "Mauritania", "Mauritius", "Mayotte", "Morocco", "Mozambique",
+  "Namibia", "Niger", "Nigeria", "Réunion", "Rwanda",
+  "Sao Tome and Principe", "Senegal", "Seychelles", "Sierra Leone",
+  "Somalia", "South Africa", "South Sudan", "Sudan",
+  "Tanzania, United Republic of", "United Republic of Tanzania",
+  "Togo", "Tunisia", "Uganda",
+  "Western Sahara", "Zambia", "Zimbabwe",
+]);
+
+export function isAfricanCountry(country: string | null): boolean {
+  return !!country && AFRICAN_COUNTRIES.has(country.trim());
+}
+
+export function filterAfricanRecords<T extends { country: string | null }>(records: T[]): T[] {
+  return records.filter((r) => isAfricanCountry(r.country));
+}
+
 export interface Occurrence {
   id: number;
   gbifId: string | null;

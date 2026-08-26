@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { fetchEpidemiological, fetchEpidemiologicalMeta, fetchDiseaseCoordinates, type EpidemiologicalRecord, type EpidemiologicalMeta, type DiseaseCoordinatesMap } from "../../lib/api";
+import { fetchEpidemiological, fetchEpidemiologicalMeta, fetchDiseaseCoordinates, type EpidemiologicalRecord, type EpidemiologicalMeta, type DiseaseCoordinatesMap, filterAfricanRecords } from "../../lib/api";
 import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader } from "../common/Atlas";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import maplibregl from "maplibre-gl";
@@ -147,7 +147,7 @@ export function DiseaseList() {
     let active = true;
     setSelectedLoading(true);
     fetchEpidemiological({ disease: selected, limit: 50000 })
-      .then((res) => { if (active) setRecords(res.data); })
+      .then((res) => { if (active) setRecords(filterAfricanRecords(res.data)); })
       .catch(() => { if (active) setRecords([]); })
       .finally(() => { if (active) setSelectedLoading(false); });
     return () => { active = false; };
