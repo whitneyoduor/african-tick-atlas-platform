@@ -1,9 +1,55 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { fetchEpidemiological, fetchDiseaseCoordinates, type EpidemiologicalRecord, type DiseaseCoordinatesMap, filterAfricanRecords } from "../../lib/api";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { atlas, tooltipStyle } from "../common/Atlas";
 import maplibregl from "maplibre-gl";
+
+const PIE_COLORS = ["#0F766E", "#14B8A6", "#2DD4BF", "#0D9488", "#115E59", "#134E4A", "#5EEAD4", "#99F6E4", "#CCFBF1", "#D97706", "#DC2626", "#2563EB", "#7C3AED", "#DB2777", "#059669"];
+
+function PieLegend({ data, colors }: { data: { name: string; count: number }[]; colors: string[] }) {
+  const total = data.reduce((s, d) => s + d.count, 0);
+  return (
+    <div className="space-y-1.5 min-w-0">
+      {data.map((d, i) => {
+        const pct = total > 0 ? ((d.count / total) * 100).toFixed(1) : "0";
+        return (
+          <div key={d.name} className="flex items-center gap-2 text-[11px]">
+            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: colors[i % colors.length] }} />
+            <span className="truncate flex-1" style={{ color: atlas.text }}>{d.name}</span>
+            <span className="shrink-0 font-medium" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>{d.count}</span>
+            <span className="shrink-0" style={{ color: atlas.textMuted, fontFamily: "monospace", fontSize: 10 }}>{pct}%</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DonutPie({ data, colors, size = 180 }: { data: { name: string; count: number }[]; colors: string[]; size?: number }) {
+  return (
+    <div style={{ width: size, height: size, flexShrink: 0 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%" cy="50%"
+            innerRadius={size * 0.25}
+            outerRadius={size * 0.42}
+            paddingAngle={2}
+            dataKey="count" nameKey="name"
+            strokeWidth={0}
+          >
+            {data.map((_, i) => (
+              <Cell key={i} fill={colors[i % colors.length]} />
+            ))}
+          </Pie>
+          <Tooltip contentStyle={tooltipStyle} />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
 function DiseaseHeatmap({ records, diseaseName, diseaseCoords }: { records: EpidemiologicalRecord[]; diseaseName: string; diseaseCoords: DiseaseCoordinatesMap }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -223,13 +269,19 @@ export function DiseasePage() {
       if (r.country) countries[r.country] = (countries[r.country] || 0) + 1;
     });
     return {
-      species: Object.entries(species).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([n, c]) => ({ name: n, count: c })),
-      hosts: Object.entries(hosts).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([n, c]) => ({ name: n, count: c })),
-      countries: Object.entries(countries).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([n, c]) => ({ name: n, count: c })),
+      species: Object.entries(species).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([n, c]) => ({ name: n, count: c })),
+      hosts: Object.entries(hosts).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([n, c]) => ({ name: n, count: c })),
+      countries: Object.entries(countries).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([n, c]) => ({ name: n, count: c })),
       speciesCount: Object.keys(species).length,
       hostCount: Object.keys(hosts).length,
       countryCount: Object.keys(countries).length,
     };
+  }, [records]);
+
+  const yearlyData = useMemo(() => {
+    const yCounts: Record<number, number> = {};
+    records.forEach((r) => { if (r.yearStart != null) yCounts[r.yearStart] = (yCounts[r.yearStart] || 0) + 1; });
+    return Object.entries(yCounts).sort(([a], [b]) => +a - +b).map(([y, c]) => ({ name: y, count: c }));
   }, [records]);
 
   if (loading) return (
@@ -249,12 +301,6 @@ export function DiseasePage() {
       </div>
     );
   }
-
-  const yearlyData = (() => {
-    const yCounts: Record<number, number> = {};
-    records.forEach((r) => { if (r.yearStart != null) yCounts[r.yearStart] = (yCounts[r.yearStart] || 0) + 1; });
-    return Object.entries(yCounts).sort(([a], [b]) => +a - +b).map(([y, c]) => ({ year: y, count: c }));
-  })();
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-6" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -306,85 +352,69 @@ export function DiseasePage() {
       )}
 
       <div className="grid grid-cols-2 gap-4 mb-6">
+        {/* Tick Vectors — Pie */}
         <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow }}>
           <div className="px-5 py-3" style={{ borderBottom: `1px solid ${atlas.border}` }}>
-            <h3 className="text-[13px] font-semibold" style={{ color: atlas.text }}>Tick Vectors</h3>
+            <h3 className="text-[13px] font-semibold" style={{ color: atlas.text }}>Associated Tick Vectors</h3>
           </div>
-          <div className="p-4 space-y-2">
-            {data.species.map((s) => {
-              const maxCount = data.species[0]?.count || 1;
-              const pct = (s.count / maxCount) * 100;
-              return (
-                <div key={s.name} className="group cursor-pointer" onClick={() => navigate(`/species/${encodeURIComponent(s.name)}`)}>
-                  <div className="flex items-center justify-between text-[12px] mb-0.5">
-                    <span className="font-medium truncate group-hover:underline" style={{ color: atlas.text }}>{s.name}</span>
-                    <span style={{ color: atlas.textMuted, fontFamily: "monospace" }}>{s.count}</span>
-                  </div>
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: atlas.grid }}>
-                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: atlas.red }} />
-                  </div>
-                </div>
-              );
-            })}
+          <div className="p-4">
+            <div className="flex items-center gap-4">
+              <DonutPie data={data.species} colors={PIE_COLORS} />
+              <div className="flex-1 min-w-0">
+                <PieLegend data={data.species.slice(0, 8)} colors={PIE_COLORS} />
+                {data.species.length > 8 && <div className="text-[10px] mt-1" style={{ color: atlas.textMuted }}>+{data.species.length - 8} more</div>}
+              </div>
+            </div>
           </div>
         </div>
 
+        {/* Countries — Pie */}
         <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow }}>
           <div className="px-5 py-3" style={{ borderBottom: `1px solid ${atlas.border}` }}>
-            <h3 className="text-[13px] font-semibold" style={{ color: atlas.text }}>Countries</h3>
+            <h3 className="text-[13px] font-semibold" style={{ color: atlas.text }}>Records by Country</h3>
           </div>
-          <div className="p-4 space-y-2">
-            {data.countries.map((c) => {
-              const maxCount = data.countries[0]?.count || 1;
-              const pct = (c.count / maxCount) * 100;
-              return (
-                <div key={c.name}>
-                  <div className="flex items-center justify-between text-[12px] mb-0.5">
-                    <span className="font-medium truncate" style={{ color: atlas.text }}>{c.name}</span>
-                    <span style={{ color: atlas.textMuted, fontFamily: "monospace" }}>{c.count}</span>
-                  </div>
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: atlas.grid }}>
-                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: atlas.teal }} />
-                  </div>
-                </div>
-              );
-            })}
+          <div className="p-4">
+            <div className="flex items-center gap-4">
+              <DonutPie data={data.countries} colors={PIE_COLORS} />
+              <div className="flex-1 min-w-0">
+                <PieLegend data={data.countries.slice(0, 8)} colors={PIE_COLORS} />
+                {data.countries.length > 8 && <div className="text-[10px] mt-1" style={{ color: atlas.textMuted }}>+{data.countries.length - 8} more</div>}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Animal Hosts — Pie */}
       <div className="rounded-lg overflow-hidden mb-6" style={{ border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow }}>
         <div className="px-5 py-3" style={{ borderBottom: `1px solid ${atlas.border}` }}>
           <h3 className="text-[13px] font-semibold" style={{ color: atlas.text }}>Animal Hosts</h3>
         </div>
         <div className="p-4">
-          <ResponsiveContainer width="100%" height={Math.max(200, data.hosts.length * 36)}>
-            <BarChart data={data.hosts} layout="vertical" margin={{ left: 10, right: 30 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={atlas.grid} horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11, fill: atlas.textMuted, fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: atlas.border }} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: atlas.text }} tickLine={false} axisLine={false} width={200} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="count" fill={atlas.amber} radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="flex items-center gap-6">
+            <DonutPie data={data.hosts} colors={PIE_COLORS} size={220} />
+            <div className="flex-1 min-w-0">
+              <PieLegend data={data.hosts.slice(0, 10)} colors={PIE_COLORS} />
+              {data.hosts.length > 10 && <div className="text-[10px] mt-1" style={{ color: atlas.textMuted }}>+{data.hosts.length - 10} more</div>}
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Records Over Time — Pie */}
       {yearlyData.length > 1 && (
         <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow }}>
           <div className="px-5 py-3" style={{ borderBottom: `1px solid ${atlas.border}` }}>
             <h3 className="text-[13px] font-semibold" style={{ color: atlas.text }}>Records Over Time</h3>
           </div>
           <div className="p-4">
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={yearlyData} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={atlas.grid} vertical={false} />
-                <XAxis dataKey="year" tick={{ fontSize: 10, fill: atlas.textMuted, fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: atlas.border }} interval="preserveStartEnd" />
-                <YAxis tick={{ fontSize: 11, fill: atlas.textMuted, fontFamily: "monospace" }} tickLine={false} axisLine={false} width={40} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="count" fill={atlas.teal} radius={[3, 3, 0, 0]} maxBarSize={20} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="flex items-center gap-6">
+              <DonutPie data={yearlyData} colors={PIE_COLORS} size={220} />
+              <div className="flex-1 min-w-0 max-h-[300px] overflow-y-auto">
+                <PieLegend data={yearlyData.slice(0, 20)} colors={PIE_COLORS} />
+                {yearlyData.length > 20 && <div className="text-[10px] mt-1" style={{ color: atlas.textMuted }}>+{yearlyData.length - 20} more</div>}
+              </div>
+            </div>
           </div>
         </div>
       )}

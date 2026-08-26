@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { fetchEpidemiological, fetchEpidemiologicalMeta, fetchDiseaseCoordinates, type EpidemiologicalRecord, type EpidemiologicalMeta, type DiseaseCoordinatesMap, filterAfricanRecords } from "../../lib/api";
 import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader } from "../common/Atlas";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import maplibregl from "maplibre-gl";
 
 const DISEASE_COLORS: Record<string, string> = {
@@ -27,6 +27,52 @@ function getDiseaseColor(name: string): string {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return palette[Math.abs(hash) % palette.length];
+}
+
+const PIE_COLORS = ["#0F766E", "#14B8A6", "#2DD4BF", "#0D9488", "#115E59", "#134E4A", "#5EEAD4", "#99F6E4", "#CCFBF1", "#D97706", "#DC2626", "#2563EB", "#7C3AED", "#DB2777", "#059669"];
+
+function PieLegend({ data, colors }: { data: { name: string; count: number }[]; colors: string[] }) {
+  const total = data.reduce((s, d) => s + d.count, 0);
+  return (
+    <div className="space-y-1.5 min-w-0">
+      {data.map((d, i) => {
+        const pct = total > 0 ? ((d.count / total) * 100).toFixed(1) : "0";
+        return (
+          <div key={d.name} className="flex items-center gap-2 text-[11px]">
+            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: colors[i % colors.length] }} />
+            <span className="truncate flex-1" style={{ color: atlas.text }}>{d.name}</span>
+            <span className="shrink-0 font-medium" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>{d.count}</span>
+            <span className="shrink-0" style={{ color: atlas.textMuted, fontFamily: "monospace", fontSize: 10 }}>{pct}%</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DonutPie({ data, colors, size = 160 }: { data: { name: string; count: number }[]; colors: string[]; size?: number }) {
+  return (
+    <div style={{ width: size, height: size, flexShrink: 0 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%" cy="50%"
+            innerRadius={size * 0.25}
+            outerRadius={size * 0.42}
+            paddingAngle={2}
+            dataKey="count" nameKey="name"
+            strokeWidth={0}
+          >
+            {data.map((_, i) => (
+              <Cell key={i} fill={colors[i % colors.length]} />
+            ))}
+          </Pie>
+          <Tooltip contentStyle={tooltipStyle} />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
 }
 
 function DiseaseMiniMap({ records, diseaseCoords }: { records: EpidemiologicalRecord[]; diseaseCoords: DiseaseCoordinatesMap }) {
@@ -281,81 +327,54 @@ export function DiseaseList() {
               </Panel>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-                <Panel title="Tick Vectors">
-                  <div className="space-y-2">
-                    {selectedData.species.map((s, i) => {
-                      const maxCount = selectedData.species[0]?.count || 1;
-                      const pct = (s.count / maxCount) * 100;
-                      return (
-                        <div key={s.name} className="group cursor-pointer" onClick={() => navigate(`/species/${encodeURIComponent(s.name)}`)}>
-                          <div className="flex items-center justify-between text-[12px] mb-0.5">
-                            <span className="font-medium truncate group-hover:underline" style={{ color: atlas.text }}>{s.name}</span>
-                            <span style={{ color: atlas.textMuted, fontFamily: "monospace" }}>{s.count}</span>
-                          </div>
-                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: atlas.grid }}>
-                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: getDiseaseColor(selected) }} />
-                          </div>
-                        </div>
-                      );
-                    })}
+                <Panel title="Associated Tick Vectors">
+                  <div className="flex items-center gap-3">
+                    <DonutPie data={selectedData.species} colors={PIE_COLORS} />
+                    <div className="flex-1 min-w-0">
+                      <PieLegend data={selectedData.species.slice(0, 6)} colors={PIE_COLORS} />
+                      {selectedData.species.length > 6 && <div className="text-[10px] mt-1" style={{ color: atlas.textMuted }}>+{selectedData.species.length - 6} more</div>}
+                    </div>
                   </div>
                 </Panel>
                 <Panel title="Animal Hosts">
-                  <div className="space-y-2">
-                    {selectedData.hosts.map((h) => {
-                      const maxCount = selectedData.hosts[0]?.count || 1;
-                      const pct = (h.count / maxCount) * 100;
-                      return (
-                        <div key={h.name}>
-                          <div className="flex items-center justify-between text-[12px] mb-0.5">
-                            <span className="font-medium truncate" style={{ color: atlas.text }}>{h.name}</span>
-                            <span style={{ color: atlas.textMuted, fontFamily: "monospace" }}>{h.count}</span>
-                          </div>
-                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: atlas.grid }}>
-                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: atlas.amber }} />
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className="flex items-center gap-3">
+                    <DonutPie data={selectedData.hosts} colors={PIE_COLORS} />
+                    <div className="flex-1 min-w-0">
+                      <PieLegend data={selectedData.hosts.slice(0, 6)} colors={PIE_COLORS} />
+                      {selectedData.hosts.length > 6 && <div className="text-[10px] mt-1" style={{ color: atlas.textMuted }}>+{selectedData.hosts.length - 6} more</div>}
+                    </div>
                   </div>
                 </Panel>
-                <Panel title="Countries">
-                  <div className="space-y-2">
-                    {selectedData.countries.map((c) => {
-                      const maxCount = selectedData.countries[0]?.count || 1;
-                      const pct = (c.count / maxCount) * 100;
-                      return (
-                        <div key={c.name}>
-                          <div className="flex items-center justify-between text-[12px] mb-0.5">
-                            <span className="font-medium truncate" style={{ color: atlas.text }}>{c.name}</span>
-                            <span style={{ color: atlas.textMuted, fontFamily: "monospace" }}>{c.count}</span>
-                          </div>
-                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: atlas.grid }}>
-                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: atlas.teal }} />
-                          </div>
-                        </div>
-                      );
-                    })}
+                <Panel title="Records by Country">
+                  <div className="flex items-center gap-3">
+                    <DonutPie data={selectedData.countries} colors={PIE_COLORS} />
+                    <div className="flex-1 min-w-0">
+                      <PieLegend data={selectedData.countries.slice(0, 6)} colors={PIE_COLORS} />
+                      {selectedData.countries.length > 6 && <div className="text-[10px] mt-1" style={{ color: atlas.textMuted }}>+{selectedData.countries.length - 6} more</div>}
+                    </div>
                   </div>
                 </Panel>
               </div>
 
-              <Panel title={`Records by Year \u2014 ${selected}`} className="mb-6">
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={(() => {
-                    const yCounts: Record<number, number> = {};
+              <Panel title={`Records Over Time \u2014 ${selected}`} className="mb-6">
+                <div className="flex items-center gap-6 p-4">
+                  <DonutPie data={(() => {
+                    const yCounts: Record<string, number> = {};
                     records.forEach((r) => {
                       if (r.yearStart != null) yCounts[r.yearStart] = (yCounts[r.yearStart] || 0) + 1;
                     });
-                    return Object.entries(yCounts).sort(([a], [b]) => +a - +b).map(([y, c]) => ({ year: y, count: c }));
-                  })()} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={atlas.grid} vertical={false} />
-                    <XAxis dataKey="year" tick={{ fontSize: 10, fill: atlas.textMuted, fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: atlas.border }} interval="preserveStartEnd" />
-                    <YAxis tick={{ fontSize: 11, fill: atlas.textMuted, fontFamily: "monospace" }} tickLine={false} axisLine={false} width={40} />
-                    <Tooltip contentStyle={tooltipStyle} />
-                    <Bar dataKey="count" fill={getDiseaseColor(selected)} radius={[3, 3, 0, 0]} maxBarSize={20} />
-                  </BarChart>
-                </ResponsiveContainer>
+                    return Object.entries(yCounts).sort(([a], [b]) => +a - +b).map(([y, c]) => ({ name: y, count: c }));
+                  })()} colors={PIE_COLORS} size={200} />
+                  <div className="flex-1 min-w-0 max-h-[240px] overflow-y-auto">
+                    <PieLegend data={(() => {
+                      const yCounts: Record<string, number> = {};
+                      records.forEach((r) => {
+                        if (r.yearStart != null) yCounts[r.yearStart] = (yCounts[r.yearStart] || 0) + 1;
+                      });
+                      return Object.entries(yCounts).sort(([a], [b]) => +a - +b).map(([y, c]) => ({ name: y, count: c }));
+                    })().slice(0, 15)} colors={PIE_COLORS} />
+                  </div>
+                </div>
               </Panel>
             </>
           ) : (
