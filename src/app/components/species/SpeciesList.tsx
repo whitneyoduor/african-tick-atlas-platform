@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from "react-router";
 import { fetchEpidemiological, fetchEpidemiologicalMeta, fetchGenBankStats, type EpidemiologicalRecord, type EpidemiologicalMeta, type GenBankStats } from "../../lib/api";
 import { prioritizeSpecies } from "../../lib/species";
 import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader } from "../common/Atlas";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 export function SpeciesList() {
   const [searchParams] = useSearchParams();
@@ -229,22 +229,54 @@ export function SpeciesList() {
             />
 
             <Panel title="Top 15 Species by Record Count" className="mb-6">
-              <ResponsiveContainer width="100%" height={500}>
-                <BarChart data={overview.top15} layout="vertical" margin={{ left: 10, right: 30 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={atlas.grid} horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: atlas.textMuted, fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: atlas.border }} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: atlas.text }} tickLine={false} axisLine={false} width={220} />
-                  <Tooltip
-                    contentStyle={tooltipStyle}
-                    formatter={(value: number, _name: string, item: any) => {
-                      const datum = item?.payload;
-                      const match = overview.top15.find((s) => s.name === datum?.name);
-                      return [`${value.toLocaleString()} records (${match?.pct || 0}%)`, datum?.fullName || datum?.name || "Species"];
-                    }}
-                  />
-                  <Bar dataKey="count" fill={atlas.teal} radius={[0, 4, 4, 0]} cursor="pointer" onClick={(data: any) => data?.fullName && navigate(`/species/${encodeURIComponent(data.fullName)}`)} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="flex flex-col lg:flex-row items-center gap-6">
+                <div style={{ width: 320, height: 320, flexShrink: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={overview.top15}
+                        cx="50%" cy="50%"
+                        innerRadius={70} outerRadius={140}
+                        paddingAngle={1}
+                        dataKey="count" nameKey="name"
+                        strokeWidth={0}
+                        cursor="pointer"
+                        onClick={(data: any) => data?.fullName && navigate(`/species/${encodeURIComponent(data.fullName)}`)}
+                      >
+                        {overview.top15.map((_, i) => (
+                          <Cell key={i} fill={["#134E4A", "#0F766E", "#14B8A6", "#0D9488", "#115E59", "#2DD4BF", "#065F46", "#047857", "#059669", "#10B981", "#34D399", "#6EE7B7", "#A7F3D0", "#047857", "#065F46"][i % 15]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ borderRadius: 8, border: "1px solid #E2E5DE", fontSize: 12, fontFamily: "monospace", background: "#FFFFFF", padding: "8px 12px" }}
+                        formatter={(value: number, _name: string, item: any) => {
+                          const datum = item?.payload;
+                          const match = overview.top15.find((s) => s.name === datum?.name);
+                          return [`${value.toLocaleString()} records (${match?.pct || 0}%)`, datum?.fullName || datum?.name || "Species"];
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 min-w-0">
+                  {overview.top15.map((s, i) => {
+                    const colors = ["#134E4A", "#0F766E", "#14B8A6", "#0D9488", "#115E59", "#2DD4BF", "#065F46", "#047857", "#059669", "#10B981", "#34D399", "#6EE7B7", "#A7F3D0", "#047857", "#065F46"];
+                    return (
+                      <button
+                        key={s.fullName}
+                        onClick={() => navigate(`/species/${encodeURIComponent(s.fullName)}`)}
+                        className="flex items-center gap-2 text-[12px] hover:underline text-left"
+                        style={{ color: atlas.text }}
+                      >
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: colors[i % colors.length] }} />
+                        <span className="truncate flex-1">{s.name}</span>
+                        <span className="shrink-0 font-medium" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>{s.count.toLocaleString()}</span>
+                        <span className="shrink-0" style={{ color: atlas.textMuted, fontFamily: "monospace", fontSize: 10 }}>{s.pct}%</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </Panel>
           </>
         )}
