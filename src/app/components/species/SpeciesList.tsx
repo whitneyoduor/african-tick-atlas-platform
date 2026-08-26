@@ -171,31 +171,104 @@ export function SpeciesList() {
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {genbankStats.genes.length > 0 && (
-                    <div>
-                      <h4 className="text-[11px] font-semibold mb-2" style={{ color: atlas.text }}>Gene Distribution</h4>
-                      <ResponsiveContainer width="100%" height={Math.max(180, genbankStats.genes.length * 28 + 40)}>
-                        <BarChart data={genbankStats.genes.slice(0, 10)} layout="vertical" margin={{ left: 0, right: 30 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke={atlas.grid} horizontal={false} />
-                          <XAxis type="number" tick={{ fontSize: 11, fill: atlas.textMuted, fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: atlas.border }} />
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: atlas.text }} tickLine={false} axisLine={false} width={80} />
-                          <Tooltip contentStyle={tooltipStyle} />
-                          <Bar dataKey="count" fill="#0F766E" radius={[0, 4, 4, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                    <div className="rounded-lg overflow-hidden" style={{ border: "1px solid #E2E5DE" }}>
+                      <div className="px-4 py-3" style={{ borderBottom: "1px solid #F0F0F0" }}>
+                        <h4 className="text-[12px] font-semibold" style={{ color: atlas.text }}>Gene Distribution</h4>
+                        <p className="text-[10px] mt-0.5" style={{ color: atlas.textMuted }}>Proportion of sequences by target gene</p>
+                      </div>
+                      <div className="p-4">
+                        <div className="flex items-center gap-4">
+                          <div style={{ width: 160, height: 160, flexShrink: 0 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={genbankStats.genes.slice(0, 8)}
+                                  cx="50%" cy="50%"
+                                  innerRadius={40} outerRadius={70}
+                                  paddingAngle={2}
+                                  dataKey="count" nameKey="name"
+                                  strokeWidth={0}
+                                >
+                                  {genbankStats.genes.slice(0, 8).map((_, i) => (
+                                    <Cell key={i} fill={["#0F766E", "#F59E0B", "#DC2626", "#2563EB", "#7C3AED", "#EC4899", "#14B8A6", "#D97706"][i % 8]} />
+                                  ))}
+                                </Pie>
+                                <Tooltip
+                                  contentStyle={{ borderRadius: 8, border: "1px solid #E2E5DE", fontSize: 11, fontFamily: "monospace", background: "#FFFFFF", padding: "6px 10px" }}
+                                  formatter={(value: number) => [`${value.toLocaleString()} seqs`, "Count"]}
+                                />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="flex-1 space-y-1 min-w-0">
+                            {genbankStats.genes.slice(0, 7).map((g, i) => {
+                              const pct = genbankStats.total > 0 ? ((g.count / genbankStats.total) * 100).toFixed(1) : "0";
+                              return (
+                                <div key={g.name} className="flex items-center gap-1.5 text-[11px]">
+                                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ["#0F766E", "#F59E0B", "#DC2626", "#2563EB", "#7C3AED", "#EC4899", "#14B8A6", "#D97706"][i % 8] }} />
+                                  <span className="truncate flex-1" style={{ color: atlas.text }}>{g.name}</span>
+                                  <span className="shrink-0 font-medium" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>{g.count}</span>
+                                  <span className="shrink-0" style={{ color: atlas.textMuted, fontFamily: "monospace", fontSize: 10 }}>{pct}%</span>
+                                </div>
+                              );
+                            })}
+                            {genbankStats.genes.length > 7 && (
+                              <div className="text-[10px]" style={{ color: atlas.textMuted }}>+{genbankStats.genes.length - 7} more</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                   {genbankStats.hosts.length > 0 && (
-                    <div>
-                      <h4 className="text-[11px] font-semibold mb-2" style={{ color: atlas.text }}>GenBank Hosts</h4>
-                      <ResponsiveContainer width="100%" height={Math.max(180, genbankStats.hosts.length * 28 + 40)}>
-                        <BarChart data={genbankStats.hosts.slice(0, 10)} layout="vertical" margin={{ left: 0, right: 30 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke={atlas.grid} horizontal={false} />
-                          <XAxis type="number" tick={{ fontSize: 11, fill: atlas.textMuted, fontFamily: "monospace" }} tickLine={false} axisLine={{ stroke: atlas.border }} />
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: atlas.text }} tickLine={false} axisLine={false} width={130} />
-                          <Tooltip contentStyle={tooltipStyle} />
-                          <Bar dataKey="count" fill={atlas.amber} radius={[0, 4, 4, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                    <div className="rounded-lg overflow-hidden" style={{ border: "1px solid #E2E5DE" }}>
+                      <div className="px-4 py-3" style={{ borderBottom: "1px solid #F0F0F0" }}>
+                        <h4 className="text-[12px] font-semibold" style={{ color: atlas.text }}>GenBank Hosts</h4>
+                        <p className="text-[10px] mt-0.5" style={{ color: atlas.textMuted }}>Hosts from which this tick was collected</p>
+                      </div>
+                      <div className="p-4">
+                        <div className="flex items-center gap-4">
+                          <div style={{ width: 160, height: 160, flexShrink: 0 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={genbankStats.hosts.slice(0, 8)}
+                                  cx="50%" cy="50%"
+                                  innerRadius={40} outerRadius={70}
+                                  paddingAngle={2}
+                                  dataKey="count" nameKey="name"
+                                  strokeWidth={0}
+                                >
+                                  {genbankStats.hosts.slice(0, 8).map((_, i) => (
+                                    <Cell key={i} fill={["#B45309", "#DC2626", "#2563EB", "#059669", "#7C3AED", "#EC4899", "#0891B2", "#CA8A04"][i % 8]} />
+                                  ))}
+                                </Pie>
+                                <Tooltip
+                                  contentStyle={{ borderRadius: 8, border: "1px solid #E2E5DE", fontSize: 11, fontFamily: "monospace", background: "#FFFFFF", padding: "6px 10px" }}
+                                  formatter={(value: number) => [`${value.toLocaleString()} seqs`, "Count"]}
+                                />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="flex-1 space-y-1 min-w-0">
+                            {genbankStats.hosts.slice(0, 7).map((h, i) => {
+                              const total = genbankStats.hosts.reduce((s, x) => s + x.count, 0);
+                              const pct = total > 0 ? ((h.count / total) * 100).toFixed(1) : "0";
+                              return (
+                                <div key={h.name} className="flex items-center gap-1.5 text-[11px]">
+                                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ["#B45309", "#DC2626", "#2563EB", "#059669", "#7C3AED", "#EC4899", "#0891B2", "#CA8A04"][i % 8] }} />
+                                  <span className="truncate flex-1" style={{ color: atlas.text }}>{h.name}</span>
+                                  <span className="shrink-0 font-medium" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>{h.count}</span>
+                                  <span className="shrink-0" style={{ color: atlas.textMuted, fontFamily: "monospace", fontSize: 10 }}>{pct}%</span>
+                                </div>
+                              );
+                            })}
+                            {genbankStats.hosts.length > 7 && (
+                              <div className="text-[10px]" style={{ color: atlas.textMuted }}>+{genbankStats.hosts.length - 7} more</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
