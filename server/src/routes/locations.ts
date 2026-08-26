@@ -4,6 +4,21 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 export const locationsRouter = Router();
 
+const AFRICAN_COUNTRIES = new Set([
+  "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi",
+  "Cabo Verde", "Cameroon", "Central African Republic", "Chad", "Comoros",
+  "Congo", "Congo, Democratic Republic of the", "Côte d'Ivoire",
+  "Djibouti", "Egypt", "Equatorial Guinea", "Eritrea", "Eswatini",
+  "Ethiopia", "Gabon", "Gambia", "Ghana", "Guinea", "Guinea-Bissau",
+  "Kenya", "Lesotho", "Liberia", "Libya", "Madagascar", "Malawi",
+  "Mali", "Mauritania", "Mauritius", "Mayotte", "Morocco", "Mozambique",
+  "Namibia", "Niger", "Nigeria", "Réunion", "Rwanda",
+  "Sao Tome and Principe", "Senegal", "Seychelles", "Sierra Leone",
+  "Somalia", "South Africa", "South Sudan", "Sudan",
+  "Tanzania, United Republic of", "Togo", "Tunisia", "Uganda",
+  "Western Sahara", "Zambia", "Zimbabwe",
+]);
+
 locationsRouter.get("/species-by-country", async (_req, res) => {
   try {
     const [occRows, epiRows] = await Promise.all([
@@ -17,9 +32,12 @@ locationsRouter.get("/species-by-country", async (_req, res) => {
       }),
     ]);
 
+    const occFiltered = occRows.filter(r => AFRICAN_COUNTRIES.has(r.country!.trim()));
+    const epiFiltered = epiRows.filter(r => AFRICAN_COUNTRIES.has(r.country!.trim()));
+
     const countryMap: Record<string, Record<string, { occurrences: number; epiRecords: number }>> = {};
 
-    for (const r of occRows) {
+    for (const r of occFiltered) {
       const country = r.country!.trim();
       const species = r.species!.trim();
       if (!countryMap[country]) countryMap[country] = {};
@@ -27,7 +45,7 @@ locationsRouter.get("/species-by-country", async (_req, res) => {
       countryMap[country][species].occurrences++;
     }
 
-    for (const r of epiRows) {
+    for (const r of epiFiltered) {
       const country = r.country!.trim();
       const species = r.species!.trim();
       if (!countryMap[country]) countryMap[country] = {};

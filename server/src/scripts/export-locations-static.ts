@@ -5,6 +5,21 @@ import path from "path";
 const p = new PrismaClient();
 const OUT_DIR = path.resolve(import.meta.dirname, "../../../public/locations");
 
+const AFRICAN_COUNTRIES = new Set([
+  "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi",
+  "Cabo Verde", "Cameroon", "Central African Republic", "Chad", "Comoros",
+  "Congo", "Congo, Democratic Republic of the", "Côte d'Ivoire",
+  "Djibouti", "Egypt", "Equatorial Guinea", "Eritrea", "Eswatini",
+  "Ethiopia", "Gabon", "Gambia", "Ghana", "Guinea", "Guinea-Bissau",
+  "Kenya", "Lesotho", "Liberia", "Libya", "Madagascar", "Malawi",
+  "Mali", "Mauritania", "Mauritius", "Mayotte", "Morocco", "Mozambique",
+  "Namibia", "Niger", "Nigeria", "Réunion", "Rwanda",
+  "Sao Tome and Principe", "Senegal", "Seychelles", "Sierra Leone",
+  "Somalia", "South Africa", "South Sudan", "Sudan",
+  "Tanzania, United Republic of", "Togo", "Tunisia", "Uganda",
+  "Western Sahara", "Zambia", "Zimbabwe",
+]);
+
 async function main() {
   if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
@@ -19,11 +34,13 @@ async function main() {
     }),
   ]);
 
-  console.log(`[Locations] ${occRows.length} occurrences, ${epiRows.length} epi records`);
+  const occFiltered = occRows.filter(r => AFRICAN_COUNTRIES.has(r.country!.trim()));
+  const epiFiltered = epiRows.filter(r => AFRICAN_COUNTRIES.has(r.country!.trim()));
+  console.log(`[Locations] ${occFiltered.length}/${occRows.length} African occurrences, ${epiFiltered.length}/${epiRows.length} African epi records`);
 
   const countryMap: Record<string, Record<string, { occurrences: number; epiRecords: number }>> = {};
 
-  for (const r of occRows) {
+  for (const r of occFiltered) {
     const country = r.country!.trim();
     const species = r.species!.trim();
     if (!countryMap[country]) countryMap[country] = {};
@@ -31,7 +48,7 @@ async function main() {
     countryMap[country][species].occurrences++;
   }
 
-  for (const r of epiRows) {
+  for (const r of epiFiltered) {
     const country = r.country!.trim();
     const species = r.species!.trim();
     if (!countryMap[country]) countryMap[country] = {};
@@ -59,7 +76,7 @@ async function main() {
     JSON.stringify({ countries: result, allCountries })
   );
 
-  console.log(`[Locations] Done! ${allCountries.length} countries exported to ${OUT_DIR}`);
+  console.log(`[Locations] Done! ${allCountries.length} African countries exported to ${OUT_DIR}`);
   await p.$disconnect();
 }
 
