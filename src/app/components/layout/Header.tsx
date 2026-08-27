@@ -6,7 +6,7 @@ const navItems = [
   { path: "/trends", label: "Trends" },
   { path: "/species", label: "Species" },
   { path: "/diseases", label: "Diseases" },
-  { path: "/environmental", label: "Environment" },
+  { path: "/environmental", label: "Tick Cohort" },
   { path: "/downloads", label: "Downloads" },
   { path: "/about", label: "About" },
 ];

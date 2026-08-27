@@ -8,7 +8,7 @@ const SpeciesList = lazy(() => import("./components/species/SpeciesList").then(m
 const SpeciesPage = lazy(() => import("./components/species/SpeciesPage").then(m => ({ default: m.SpeciesPage })));
 const DiseaseList = lazy(() => import("./components/disease/DiseaseList").then(m => ({ default: m.DiseaseList })));
 const DiseasePage = lazy(() => import("./components/disease/DiseasePage").then(m => ({ default: m.DiseasePage })));
-const EnvironmentalLayers = lazy(() => import("./components/environmental/EnvironmentalLayers").then(m => ({ default: m.EnvironmentalLayers })));
+const ReproductivePotential = lazy(() => import("./components/rc/ReproductivePotential").then(m => ({ default: m.ReproductivePotential })));
 const Downloads = lazy(() => import("./components/downloads/Downloads").then(m => ({ default: m.Downloads })));
 const About = lazy(() => import("./components/about/About").then(m => ({ default: m.About })));
 
@@ -36,7 +36,7 @@ export default function App() {
           <Route path="species/:name" element={<Suspense fallback={<Loading />}><SpeciesPageWrapper /></Suspense>} />
           <Route path="diseases" element={<Suspense fallback={<Loading />}><DiseaseList /></Suspense>} />
           <Route path="diseases/:name" element={<Suspense fallback={<Loading />}><DiseasePage /></Suspense>} />
-          <Route path="environmental" element={<Suspense fallback={<Loading />}><EnvironmentalLayers /></Suspense>} />
+          <Route path="environmental" element={<Suspense fallback={<Loading />}><ReproductivePotential /></Suspense>} />
           <Route path="downloads" element={<Suspense fallback={<Loading />}><Downloads /></Suspense>} />
           <Route path="about" element={<Suspense fallback={<Loading />}><About /></Suspense>} />
           <Route path="*" element={<NotFound />} />
