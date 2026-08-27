@@ -109,6 +109,7 @@ export function ReproductivePotential() {
   const dataRef = useRef<CountryData | null>(null);
   const speciesRef = useRef("");
   const monthRef = useRef(1);
+  const fittedRef = useRef<string | null>(null);
   speciesRef.current = species;
   monthRef.current = month;
   geoRef.current = geoJson;
@@ -160,7 +161,8 @@ export function ReproductivePotential() {
     return index.species[species];
   }, [index, species]);
 
-  // Set up map once
+  // Set up map once the container is mounted (container only exists once index loads)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!containerRef.current || mapObj.current) return;
 
@@ -212,7 +214,7 @@ export function ReproductivePotential() {
       m.remove();
       mapObj.current = null;
     };
-  }, []);
+  }, [index]);
 
   // Add/update layers whenever country data, species, or month changes
   useEffect(() => {
@@ -276,7 +278,8 @@ export function ReproductivePotential() {
         });
 
         const bbox = geoBounds(geo);
-        if (bbox) {
+        if (bbox && fittedRef.current !== data.gid) {
+          fittedRef.current = data.gid;
           m.fitBounds(
             [[bbox[0], bbox[1]], [bbox[2], bbox[3]]] as [[number, number], [number, number]],
             { padding: 30, duration: 400 }
