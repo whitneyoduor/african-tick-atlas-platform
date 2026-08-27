@@ -1,3 +1,5 @@
+import type { DiseaseCoordinateEntry, DiseaseCoordinatesMap, DiseaseCoordinatePoint } from "./api";
+
 export type FebrileCategoryKey = "core" | "other";
 
 export interface FebrileCategory {
@@ -86,9 +88,75 @@ export function extractFebrileGenera(text: string | null | undefined): string[] 
 }
 
 /**
+ * Classifies a record by scanning species and disease fields for the six
+ * target genera (using genus names and common-name aliases such as
+ * "spotted fever", "Lyme" or "Q fever"). Combined entries such as
+ * "Babesia, Theileria, Borrelia" return every matched genus so
+ * multi-pathogen cards are captured, not missed.
+ */
+export function febrileGeneraOfRecord(r: {
+  species?: string | null;
+  epidemiologicalDisease?: string | null;
+}): string[] {
+  const found = new Set<string>();
+  [r.species, r.epidemiologicalDisease].forEach((t) => {
+    if (!t) return;
+    for (const g of extractFebrileGenera(t)) found.add(g);
+  });
+  return [...found];
+}
+
+/**
  * Classifies a plain disease/pathogen label (e.g. "Spotted fever group
  * Rickettsia spp.") into the same genus keys used for records.
  */
 export function febrileGeneraOfLabel(label: string): string[] {
   return extractFebrileGenera(label);
+}
+
+export interface FebrilePoint extends DiseaseCoordinatePoint {
+  genus: string;
+  genusLabel: string;
+}
+
+/**
+ * Merges per-disease coordinate points and rolls them up under the pathogen
+ * genus of each disease card, so the map is colour-coded by genus. A disease
+ * entry such as "Anaplasma, Ehrlichia, Rickettsia, Theileria, Babesia, Coxiella"
+ * contributes its points to every matched genus.
+ */
+export function buildFebrileEntry(
+  diseaseCoords: DiseaseCoordinatesMap,
+  genusKeys: string[]
+): DiseaseCoordinateEntry {
+  const target = new Set(genusKeys);
+  const points: FebrilePoint[] = [];
+  const seen = new Set<string>();
+  for (const [diseaseName, entry] of Object.entries(diseaseCoords)) {
+    if (!entry || !entry.points) continue;
+    const genera = febrileGeneraOfLabel(diseaseName).filter((k) => target.has(k));
+    if (genera.length === 0) continue;
+    for (const gk of genera) {
+      const genus = FEBRILE_GENERA_MAP[gk];
+      for (const p of entry.points) {
+        const dedupeKey = `${gk}|${p.lat.toFixed(3)}|${p.lng.toFixed(3)}`;
+        if (seen.has(dedupeKey)) continue;
+        seen.add(dedupeKey);
+        points.push({
+          lat: p.lat,
+          lng: p.lng,
+          species: p.species,
+          country: p.country,
+          year: p.year,
+          genus: gk,
+          genusLabel: genus.label,
+        });
+      }
+    }
+  }
+  return {
+    points,
+    species: genusKeys.map((k) => FEBRILE_GENERA_MAP[k]?.label).filter(Boolean) as string[],
+    totalPoints: points.length,
+  };
 }
