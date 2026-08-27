@@ -4,6 +4,7 @@ import { fetchEpidemiological, fetchEpidemiologicalMeta, fetchDiseaseCoordinates
 import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader } from "../common/Atlas";
 import { EvidenceMap } from "../common/EvidenceMap";
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { FEBRILE_CATEGORIES, FEBRILE_GENERA_MAP, febrileGeneraOfLabel } from "../../lib/febrile";
 
 const DISEASE_COLORS: Record<string, string> = {
   "Rickettsia": "#DC2626",
@@ -86,6 +87,7 @@ export function DiseaseList() {
   const [loading, setLoading] = useState(true);
   const [selectedLoading, setSelectedLoading] = useState(false);
   const [selected, setSelected] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [diseaseCoords, setDiseaseCoords] = useState<DiseaseCoordinatesMap>({});
 
   useEffect(() => {
@@ -112,11 +114,33 @@ export function DiseaseList() {
 
   const diseases = useMemo(() => (meta?.diseases || []).filter((d) => d && d.name), [meta]);
 
+  const diseaseCategory = (name: string): "core" | "other" | "both" | null => {
+    const keys = febrileGeneraOfLabel(name);
+    if (keys.length === 0) return null;
+    const cats = new Set(keys.map((k) => FEBRILE_GENERA_MAP[k].category as "core" | "other"));
+    return cats.size > 1 ? "both" : [...cats][0] ?? null;
+  };
+
+  const filteredDiseases = useMemo(() => {
+    if (categoryFilter === "all") return diseases;
+    return diseases.filter((d) => {
+      const c = diseaseCategory(d.name);
+      return c === categoryFilter || c === "both";
+    });
+  }, [diseases, categoryFilter]);
+
   const overview = useMemo(() => {
     if (!meta) return null;
-    const total = meta.totalRecords;
-    return { totalDiseases: diseases.length, totalRecords: total, totalCountries: meta.countries.length, diseases: diseases.slice(0, 30) };
-  }, [meta, diseases]);
+    const total = categoryFilter === "all"
+      ? meta.totalRecords
+      : filteredDiseases.reduce((s, d) => s + (d.count || 0), 0);
+    return {
+      totalDiseases: filteredDiseases.length,
+      totalRecords: total,
+      totalCountries: meta.countries.length,
+      diseases: filteredDiseases.slice(0, 30),
+    };
+  }, [meta, filteredDiseases, categoryFilter]);
 
   const selectedData = useMemo(() => {
     if (!selected || records.length === 0) return null;
@@ -155,16 +179,29 @@ export function DiseaseList() {
         />
 
         <FilterBar>
+          <FilterGroup label="Pathogen Category">
+            <Select value={categoryFilter} onChange={setCategoryFilter} minWidth={230}>
+              <option value="all">All pathogens</option>
+              {FEBRILE_CATEGORIES.map((c) => (
+                <option key={c.key} value={c.key}>{c.label}</option>
+              ))}
+            </Select>
+          </FilterGroup>
           <FilterGroup label="Disease">
             <Select value={selected} onChange={setSelected} minWidth={340}>
               <option value="">Select a disease...</option>
-              {diseases.map((d) => (
+              {filteredDiseases.map((d) => (
                 <option key={d.name} value={d.name}>{d.name} ({d.count})</option>
               ))}
             </Select>
           </FilterGroup>
-          {selected && selectedData && (
+          {categoryFilter !== "all" && (
             <Chip tone="amber">
+              {FEBRILE_CATEGORIES.find((c) => c.key === categoryFilter)?.label} &middot; classified by genus
+            </Chip>
+          )}
+          {selected && selectedData && (
+            <Chip tone="teal">
               {selectedData.total.toLocaleString()} records &middot; {selectedData.uniqueVectors} vectors &middot; {selectedData.uniqueCountries} countries
             </Chip>
           )}
@@ -186,6 +223,7 @@ export function DiseaseList() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {overview.diseases.map((d) => {
                   const color = getDiseaseColor(d.name);
+                  const cat = diseaseCategory(d.name);
                   return (
                     <button
                       key={d.name}
@@ -193,14 +231,28 @@ export function DiseaseList() {
                       className="text-left rounded-lg bg-white p-4 transition-all hover:shadow-md cursor-pointer group"
                       style={{ border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow }}
                     >
-                      <div className="flex items-start gap-3">
-                        <div className="w-2.5 h-2.5 rounded-full mt-1 shrink-0" style={{ background: color }} />
-                        <div className="min-w-0 flex-1">
-                          <div className="text-[13px] font-semibold truncate group-hover:underline" style={{ color: atlas.text }}>{d.name}</div>
-                          <div className="text-[11px] mt-0.5" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
-                            {d.count.toLocaleString()} records
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div className="w-2.5 h-2.5 rounded-full mt-1 shrink-0" style={{ background: color }} />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[13px] font-semibold truncate group-hover:underline" style={{ color: atlas.text }}>{d.name}</div>
+                            <div className="text-[11px] mt-0.5" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
+                              {d.count.toLocaleString()} records
+                            </div>
                           </div>
                         </div>
+                        {cat && (
+                          <span
+                            className="shrink-0 text-[9px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5"
+                            style={{
+                              background: cat === "both" ? "#6B7280" : cat === "core" ? "#DC2626" : "#7C3AED",
+                              color: "#FFFFFF",
+                            }}
+                            title={cat === "both" ? "Matches both febrile categories" : FEBRILE_CATEGORIES.find((c) => c.key === cat)?.label}
+                          >
+                            {cat === "both" ? "Febrile" : cat === "core" ? "Malaria-diff" : "Neglected febrile"}
+                          </span>
+                        )}
                       </div>
                     </button>
                   );
