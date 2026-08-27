@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import { atlas } from "./Atlas";
-import type { DiseaseCoordinateEntry } from "../../lib/api";
+import type { DiseaseCoordinateEntry, DiseaseCoordinatePoint } from "../../lib/api";
 
 const SPECIES_COLORS = [
   "#0F766E", "#7C3AED", "#D97706", "#2563EB", "#DC2626",
@@ -9,13 +9,29 @@ const SPECIES_COLORS = [
   "#14B8A6", "#BE185D", "#6D28D9", "#EA580C", "#9333EA",
 ];
 
-function countBySpecies(entry: DiseaseCoordinateEntry): Map<string, number> {
+type PointWithGenus = DiseaseCoordinatePoint & { genus?: string; genusLabel?: string };
+
+function groupKey(p: PointWithGenus): string {
+  return p.genus || p.species || "Unknown";
+}
+
+function groupLabel(p: PointWithGenus): string {
+  return p.genusLabel || p.species || "Unknown";
+}
+
+function countByGroup(entry: DiseaseCoordinateEntry): {
+  counts: Map<string, number>;
+  names: Map<string, string>;
+} {
   const counts = new Map<string, number>();
-  for (const p of entry.points) {
-    const sp = p.species || "Unknown";
-    counts.set(sp, (counts.get(sp) || 0) + 1);
+  const names = new Map<string, string>();
+  for (const raw of entry.points) {
+    const p = raw as PointWithGenus;
+    const k = groupKey(p);
+    counts.set(k, (counts.get(k) || 0) + 1);
+    names.set(k, groupLabel(p));
   }
-  return counts;
+  return { counts, names };
 }
 
 export function EvidenceMap({
@@ -28,38 +44,52 @@ export function EvidenceMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
 
-  const speciesColors = useMemo(() => {
+  const byGenus = useMemo(
+    () => !!entry && entry.points.some((p) => (p as PointWithGenus).genus),
+    [entry]
+  );
+
+  const groupColors = useMemo(() => {
     const m = new Map<string, string>();
     if (!entry) return m;
-    const counts = countBySpecies(entry);
+    const { counts } = countByGroup(entry);
     [...counts.entries()]
       .sort((a, b) => b[1] - a[1])
-      .forEach(([sp], i) => m.set(sp, SPECIES_COLORS[i % SPECIES_COLORS.length]));
+      .forEach(([k], i) => m.set(k, SPECIES_COLORS[i % SPECIES_COLORS.length]));
     return m;
   }, [entry]);
 
   const legend = useMemo(() => {
     if (!entry) return [];
-    const counts = countBySpecies(entry);
+    const { counts, names } = countByGroup(entry);
     return [...counts.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 8)
-      .map(([sp, count]) => ({ name: sp, count, color: speciesColors.get(sp) || "#94A3B8" }));
-  }, [entry, speciesColors]);
+      .map(([k, count]) => ({
+        name: names.get(k) || k,
+        count,
+        color: groupColors.get(k) || "#94A3B8",
+      }));
+  }, [entry, groupColors]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     if (!entry || entry.points.length === 0) return;
 
-    const features: GeoJSON.Feature[] = entry.points.map((p) => ({
-      type: "Feature",
-      geometry: { type: "Point", coordinates: [p.lng, p.lat] },
-      properties: {
-        species: p.species || "Unknown",
-        country: p.country || null,
-        year: p.year ?? null,
-      },
-    }));
+    const features: GeoJSON.Feature[] = entry.points.map((raw) => {
+      const p = raw as PointWithGenus;
+      return {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [p.lng, p.lat] },
+        properties: {
+          group: groupKey(p),
+          label: groupLabel(p),
+          species: p.species || null,
+          country: p.country || null,
+          year: p.year ?? null,
+        },
+      };
+    });
 
     const map = new maplibregl.Map({
       container: containerRef.current,
@@ -132,8 +162,8 @@ export function EvidenceMap({
       });
 
       const matchPairs: (string | number)[] = [];
-      for (const [sp, color] of speciesColors) {
-        matchPairs.push(sp, color);
+      for (const [k, color] of groupColors) {
+        matchPairs.push(k, color);
       }
       matchPairs.push("#94A3B8");
 
@@ -144,7 +174,7 @@ export function EvidenceMap({
         filter: ["!", ["has", "point_count"]],
         paint: {
           "circle-radius": 6,
-          "circle-color": ["match", ["get", "species"], ...matchPairs],
+          "circle-color": ["match", ["get", "group"], ...matchPairs],
           "circle-stroke-color": "#FFFFFF",
           "circle-stroke-width": 1,
           "circle-opacity": 0.92,
@@ -158,16 +188,21 @@ export function EvidenceMap({
 
       const showPoint = (f: any) => {
         const props = f.properties || {};
-        const color = speciesColors.get(props.species) || "#0F766E";
+        const color = groupColors.get(props.group) || "#0F766E";
         const year = props.year ? String(props.year) : "Year unknown";
         const country = props.country || "Country unspecified";
+        const speciesLine =
+          props.species && props.species !== props.label
+            ? `<div style="margin-top:2px;font-size:11px;color:#64748B">${props.species}</div>`
+            : "";
         return `
           <div style="font-family:system-ui;font-size:12px;line-height:1.55">
             <div style="display:flex;align-items:center;gap:6px">
               <span style="width:9px;height:9px;border-radius:50%;background:${color};display:inline-block"></span>
-              <span style="font-weight:600">${props.species}</span>
+              <span style="font-weight:600">${props.label}</span>
             </div>
             <div style="color:#0F766E;font-size:11px;font-family:monospace;margin-top:2px">${diseaseName}</div>
+            ${speciesLine}
             <div style="margin-top:4px">${country}</div>
             <div style="color:${atlas.textMuted}">${year}</div>
           </div>`;
@@ -210,7 +245,7 @@ export function EvidenceMap({
       map.remove();
       mapRef.current = null;
     };
-  }, [entry, diseaseName, speciesColors]);
+  }, [entry, diseaseName, groupColors]);
 
   return (
     <div className="relative w-full h-full">
@@ -228,7 +263,7 @@ export function EvidenceMap({
             className="text-[10px] font-semibold uppercase tracking-wider mb-1.5"
             style={{ color: atlas.textMuted }}
           >
-            Tick species
+            {byGenus ? "Pathogen genus" : "Tick species"}
           </div>
           <div className="space-y-1">
             {legend.map((l) => (
@@ -252,12 +287,12 @@ export function EvidenceMap({
               </div>
             ))}
           </div>
-          {speciesColors.size > legend.length && (
+          {groupColors.size > legend.length && (
             <div
               className="text-[10px] mt-1"
               style={{ color: atlas.textMuted }}
             >
-              +{speciesColors.size - legend.length} more species
+              +{groupColors.size - legend.length} more {byGenus ? "genera" : "species"}
             </div>
           )}
         </div>

@@ -194,12 +194,8 @@ export function FebrilePathogens() {
           title="Human Febrile Pathogens"
           subtitle={
             <>
-              Tick-borne pathogens relevant to the{" "}
-              <span style={{ fontWeight: 600, color: atlas.text }}>differential diagnosis of febrile illness</span>{" "}
-              in malaria-endemic Africa. Records are classified by genus — sub-species like{" "}
-              <span style={{ fontFamily: "monospace", fontSize: 12 }}>Rickettsia africae</span> and combined entries like{" "}
-              <span style={{ fontFamily: "monospace", fontSize: 12 }}>Babesia, Theileria, Borrelia</span> are rolled up
-              into their respective genera, never missed.
+              Tick-borne pathogens that present like malaria —{" "}
+              <span style={{ fontWeight: 600, color: atlas.text }}>mapped by genus</span>.
             </>
           }
         />
@@ -215,44 +211,46 @@ export function FebrilePathogens() {
             return (
               <div
                 key={c.key}
-                className="rounded-lg bg-white p-5"
+                className="rounded-lg bg-white overflow-hidden"
                 style={{ border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow }}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div
-                      className="w-3 h-3 rounded-full shrink-0"
-                      style={{ background: genera[0].color }}
-                    />
+                <div
+                  className="h-1.5"
+                  style={{
+                    background: `linear-gradient(90deg, ${genera[0].color}, ${genera[genera.length - 1].color})`,
+                  }}
+                />
+                <div className="p-5">
+                  <div className="flex items-center justify-between gap-3">
                     <h3 className="text-[14px] font-semibold truncate" style={{ color: atlas.text }}>
                       {c.label}
                     </h3>
+                    <span
+                      className="shrink-0 text-[22px] font-bold tabular-nums leading-none"
+                      style={{ color: genera[0].color, fontFamily: "monospace" }}
+                    >
+                      {count.toLocaleString()}
+                    </span>
                   </div>
-                  <span
-                    className="shrink-0 text-[12px] font-semibold tabular-nums"
-                    style={{ color: atlas.teal, fontFamily: "monospace" }}
-                  >
-                    {count.toLocaleString()}
-                  </span>
-                </div>
-                <p className="text-[12px] mt-1.5 leading-relaxed" style={{ color: atlas.textSub }}>
-                  {c.description}
-                </p>
-                <div className="flex items-center gap-2 mt-3 flex-wrap">
-                  {genera.map((g) => {
-                    const recs = classified.genusRows.find((r) => r.genus.key === g.key)?.records || 0;
-                    return (
-                      <Chip key={g.key}>
-                        <span className="inline-flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full inline-block" style={{ background: g.color }} />
-                          {g.label} &middot; {recs.toLocaleString()}
-                        </span>
-                      </Chip>
-                    );
-                  })}
-                </div>
-                <div className="text-[11px] mt-3" style={{ color: atlas.textMuted }} key={c.key + "-sum"}>
-                  {totalGenusRecords.toLocaleString()} matching records across {genera.length} genera
+                  <p className="text-[12px] mt-1 leading-snug" style={{ color: atlas.textSub }}>
+                    {c.description}
+                  </p>
+                  <div className="flex items-center gap-2 mt-3 flex-wrap">
+                    {genera.map((g) => {
+                      const recs = classified.genusRows.find((r) => r.genus.key === g.key)?.records || 0;
+                      return (
+                        <Chip key={g.key}>
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full inline-block" style={{ background: g.color }} />
+                            {g.label} &middot; {recs.toLocaleString()}
+                          </span>
+                        </Chip>
+                      );
+                    })}
+                  </div>
+                  <div className="text-[11px] mt-3" style={{ color: atlas.textMuted }} key={c.key + "-sum"}>
+                    {totalGenusRecords.toLocaleString()} records &middot; {genera.length} genera
+                  </div>
                 </div>
               </div>
             );
@@ -262,12 +260,12 @@ export function FebrilePathogens() {
         <StatCards
           className="grid-cols-2 lg:grid-cols-6"
           items={[
-            { label: "Core Malaria-Differential Records", value: classified.coreCount, hint: "Rickettsia + Borrelia + Babesia" },
-            { label: "Other Neglected Febrile Records", value: classified.otherCount, hint: "Coxiella + Anaplasma + Ehrlichia" },
-            { label: "Total Febrile Records", value: classified.totalMatched, hint: "across all six genera" },
-            { label: "Tick Vectors", value: classified.speciesTotal, hint: "distinct species rolled up by genus" },
-            { label: "Multi-Pathogen Entries", value: classified.multiCount, hint: "records parsed into 2+ genera" },
-            { label: "Countries", value: classified.countryTotal, hint: "across Africa" },
+            { label: "Core Records", value: classified.coreCount, hint: "Rickettsia + Borrelia + Babesia" },
+            { label: "Other Records", value: classified.otherCount, hint: "Coxiella + Anaplasma + Ehrlichia" },
+            { label: "Total Records", value: classified.totalMatched, hint: "All six genera" },
+            { label: "Tick Vectors", value: classified.speciesTotal, hint: "Rolled up by genus" },
+            { label: "Multi-Pathogen", value: classified.multiCount, hint: "Entries in 2+ genera" },
+            { label: "Countries", value: classified.countryTotal, hint: "Across Africa" },
           ]}
         />
 
@@ -376,10 +374,6 @@ export function FebrilePathogens() {
                 </div>
               ))}
             </div>
-            <p className="text-[10px] mt-3 leading-relaxed" style={{ color: atlas.textMuted }}>
-              Species roll-up includes sub-species and "spp." groupings, e.g. "Spotted fever group Rickettsia spp."
-              counts under Rickettsia.
-            </p>
           </Panel>
         </div>
 
@@ -396,7 +390,7 @@ export function FebrilePathogens() {
                 Geographic Distribution
               </h3>
               <p className="text-[11px] mt-0.5" style={{ color: atlas.textMuted }}>
-                Tick occurrence points rolled up and coloured by pathogen genus
+                Occurrence points rolled up by pathogen genus
               </p>
             </div>
             <span className="text-[11px] tabular-nums" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
@@ -430,27 +424,33 @@ export function FebrilePathogens() {
             <button
               key={r.genus.key}
               onClick={() => setMapFilter(r.genus.key)}
-              className="text-left rounded-lg bg-white p-4 transition-all hover:shadow-md cursor-pointer"
-              style={{ border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow }}
+              className="text-left rounded-lg transition-all hover:shadow-md cursor-pointer"
+              style={{
+                border: `1px solid ${r.genus.color}40`,
+                boxShadow: atlas.shadow,
+                background: `linear-gradient(180deg, ${r.genus.color}14, #FFFFFF 45%)`,
+              }}
             >
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: r.genus.color }} />
-                <div className="text-[13px] font-semibold truncate" style={{ color: atlas.text }}>
-                  {r.genus.label}
+              <div className="p-4 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: r.genus.color }} />
+                  <div className="text-[13px] font-semibold truncate" style={{ color: atlas.text }}>
+                    {r.genus.label}
+                  </div>
+                </div>
+                <div className="mt-2 text-[20px] font-bold leading-none tabular-nums" style={{ color: r.genus.color, fontFamily: "monospace" }}>
+                  {r.records.toLocaleString()}
+                </div>
+                <div className="text-[10px] mt-1" style={{ color: atlas.textMuted }}>
+                  {r.species.length} species
                 </div>
               </div>
-              <div className="text-[11px] mt-1" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
-                {r.records.toLocaleString()} records
-              </div>
-              <div className="text-[10px] mt-0.5" style={{ color: atlas.textMuted }}>
-                {r.species.length} species
-              </div>
-              <div className="mt-2 pt-2 text-[10px] min-h-[34px]" style={{ borderTop: `1px solid ${atlas.grid}`, color: atlas.textSub }}>
+              <div className="mx-3 mb-3 rounded-md px-2.5 py-2 text-[10px] min-h-[34px] bg-white" style={{ border: `1px solid ${atlas.grid}` }}>
                 {r.species.slice(0, 2).map((s) => (
-                  <div key={s.name} className="truncate">{s.name}</div>
+                  <div key={s.name} className="truncate" style={{ color: atlas.textSub }}>{s.name}</div>
                 ))}
-                {r.species.length > 2 && <div>+{r.species.length - 2} more</div>}
-                {r.species.length === 0 && <div>&mdash;</div>}
+                {r.species.length > 2 && <div style={{ color: atlas.textMuted }}>+{r.species.length - 2} more</div>}
+                {r.species.length === 0 && <div style={{ color: atlas.textMuted }}>&mdash;</div>}
               </div>
             </button>
           ))}
@@ -458,7 +458,7 @@ export function FebrilePathogens() {
 
         {multiRecords.length > 0 && (
           <Panel
-            title="Multi-Pathogen Records (parsed into each genus)"
+            title="Multi-Pathogen Records"
             action={
               <span className="text-[11px] tabular-nums" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
                 {classified.multiCount.toLocaleString()} total
@@ -517,9 +517,8 @@ export function FebrilePathogens() {
         )}
 
         <SourceNote>
-          Source: African Tick Atlas — epidemiological records classified by tick pathogen genus (Rickettsia, Borrelia,
-          Babesia, Coxiella, Anaplasma, Ehrlichia) for the differential diagnosis of human febrile illness in
-          malaria-endemic settings.
+          Epidemiological records (African Tick Atlas) classified by genus — Rickettsia, Borrelia, Babesia, Coxiella,
+          Anaplasma, Ehrlichia — for the differential diagnosis of febrile illness in malaria-endemic Africa.
         </SourceNote>
       </div>
     </div>

@@ -20,14 +20,12 @@ export const FEBRILE_CATEGORIES: FebrileCategory[] = [
   {
     key: "core",
     label: "Core malaria-differential",
-    description:
-      "Tick-borne pathogens that can present with malaria-like febrile illness and are documented causes of diagnostic confusion with malaria.",
+    description: "Mimic malaria — a documented cause of diagnostic confusion.",
   },
   {
     key: "other",
-    label: "Other neglected febrile pathogens",
-    description:
-      "Important causes of undifferentiated febrile illness that may be overlooked where routine diagnosis concentrates on malaria and other common infections.",
+    label: "Other neglected febrile",
+    description: "Undifferentiated fevers that routine tests overlook.",
   },
 ];
 
@@ -118,11 +116,14 @@ export function febrileGeneraOfLabel(label: string): string[] {
 
 export interface FebrilePoint extends DiseaseCoordinatePoint {
   genus: string;
+  genusLabel: string;
 }
 
 /**
- * Merges per-disease coordinate points and rolls each point up under the tick
- * pathogen genus of its species name, so the map is colour-coded by genus.
+ * Merges per-disease coordinate points and rolls them up under the pathogen
+ * genus of each disease card, so the map is colour-coded by genus. A disease
+ * entry such as "Anaplasma, Ehrlichia, Rickettsia, Theileria, Babesia, Coxiella"
+ * contributes its points to every matched genus.
  */
 export function buildFebrileEntry(
   diseaseCoords: DiseaseCoordinatesMap,
@@ -131,23 +132,26 @@ export function buildFebrileEntry(
   const target = new Set(genusKeys);
   const points: FebrilePoint[] = [];
   const seen = new Set<string>();
-  for (const entry of Object.values(diseaseCoords)) {
+  for (const [diseaseName, entry] of Object.entries(diseaseCoords)) {
     if (!entry || !entry.points) continue;
-    for (const p of entry.points) {
-      if (!p.species) continue;
-      const genus = FEBRILE_GENERA.find((g) => g.match.test(p.species));
-      if (!genus || !target.has(genus.key)) continue;
-      const dedupeKey = `${genus.key}|${p.lat.toFixed(2)}|${p.lng.toFixed(2)}`;
-      if (seen.has(dedupeKey)) continue;
-      seen.add(dedupeKey);
-      points.push({
-        lat: p.lat,
-        lng: p.lng,
-        species: genus.label,
-        country: p.country,
-        year: p.year,
-        genus: genus.key,
-      });
+    const genera = febrileGeneraOfLabel(diseaseName).filter((k) => target.has(k));
+    if (genera.length === 0) continue;
+    for (const gk of genera) {
+      const genus = FEBRILE_GENERA_MAP[gk];
+      for (const p of entry.points) {
+        const dedupeKey = `${gk}|${p.lat.toFixed(3)}|${p.lng.toFixed(3)}`;
+        if (seen.has(dedupeKey)) continue;
+        seen.add(dedupeKey);
+        points.push({
+          lat: p.lat,
+          lng: p.lng,
+          species: p.species,
+          country: p.country,
+          year: p.year,
+          genus: gk,
+          genusLabel: genus.label,
+        });
+      }
     }
   }
   return {
