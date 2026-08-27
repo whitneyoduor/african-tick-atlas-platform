@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import {
   fetchEpidemiological,
@@ -15,7 +15,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { atlas, tooltipStyle } from "../common/Atlas";
-import maplibregl from "maplibre-gl";
+import { EvidenceMap } from "../common/EvidenceMap";
 
 const COLORS = [
   "#0F766E", "#D97706", "#DC2626", "#2563EB", "#7C3AED",
@@ -182,140 +182,7 @@ function DiseaseHeatmap({
   diseaseName: string;
   diseaseCoords: DiseaseCoordinatesMap;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-
-  useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
-
-    const features: GeoJSON.Feature[] = [];
-    const entry = diseaseCoords[diseaseName];
-    if (entry && entry.points.length > 0) {
-      for (const pt of entry.points) {
-        features.push({
-          type: "Feature",
-          geometry: { type: "Point", coordinates: [pt.lng, pt.lat] },
-          properties: { disease: diseaseName },
-        });
-      }
-    }
-
-    if (features.length === 0) return;
-
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: "https://tiles.openfreemap.org/styles/liberty",
-      bounds: [
-        [-20, -35],
-        [55, 37],
-      ],
-      attributionControl: false,
-    });
-
-    map.addControl(
-      new maplibregl.NavigationControl({ showCompass: false }),
-      "top-right"
-    );
-
-    map.on("load", () => {
-      map.addSource("disease-pts", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features },
-      });
-
-      map.addLayer({
-        id: "heat",
-        type: "heatmap",
-        source: "disease-pts",
-        paint: {
-          "heatmap-weight": 1,
-          "heatmap-intensity": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            0,
-            1,
-            6,
-            3,
-          ],
-          "heatmap-color": [
-            "interpolate",
-            ["linear"],
-            ["heatmap-density"],
-            0,
-            "rgba(236,253,245,0)",
-            0.15,
-            "rgba(16,185,129,0.2)",
-            0.3,
-            "rgba(16,185,129,0.4)",
-            0.5,
-            "rgba(15,118,110,0.6)",
-            0.7,
-            "rgba(15,118,110,0.8)",
-            1,
-            "rgba(13,70,67,1)",
-          ],
-          "heatmap-radius": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            0,
-            12,
-            6,
-            30,
-          ],
-          "heatmap-opacity": 0.85,
-        },
-      });
-
-      map.addLayer({
-        id: "pts",
-        type: "circle",
-        source: "disease-pts",
-        paint: {
-          "circle-radius": 5,
-          "circle-color": "#0F766E",
-          "circle-stroke-color": "#FFFFFF",
-          "circle-stroke-width": 1.5,
-          "circle-opacity": 0.9,
-        },
-      });
-
-      const popup = new maplibregl.Popup({
-        closeButton: false,
-        maxWidth: "220px",
-      });
-      map.on("mouseenter", "pts", (e) => {
-        map.getCanvas().style.cursor = "pointer";
-        const f = e.features?.[0];
-        if (!f) return;
-        popup
-          .setHTML(
-            `<div style="font-family:system-ui;font-size:12px;line-height:1.5"><div style="font-weight:600">${diseaseName}</div><div style="color:#0F766E;font-family:monospace;font-size:11px">GPS occurrence point</div></div>`
-          )
-          .setLngLat(e.lngLat)
-          .addTo(map);
-      });
-      map.on("mouseleave", "pts", () => {
-        map.getCanvas().style.cursor = "";
-        popup.remove();
-      });
-    });
-
-    mapRef.current = map;
-    return () => {
-      map.remove();
-      mapRef.current = null;
-    };
-  }, [records, diseaseName, diseaseCoords]);
-
-  return (
-    <div
-      ref={containerRef}
-      className="w-full h-full"
-      style={{ minHeight: 360 }}
-    />
-  );
+  return <EvidenceMap entry={diseaseCoords[diseaseName]} diseaseName={diseaseName} />;
 }
 
 function TimelineHeatmap({
@@ -666,6 +533,13 @@ export function DiseasePage() {
           >
             Geographic Distribution
           </h3>
+          <p
+            className="text-[11px] mt-0.5"
+            style={{ color: atlas.textMuted }}
+          >
+            Tick occurrence points linked to {disease} &middot; sized by
+            concentration, colored by species, hover for details
+          </p>
         </div>
         <div style={{ height: 380 }}>
           <DiseaseHeatmap

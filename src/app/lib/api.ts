@@ -426,6 +426,9 @@ export function exportAsCSV(records: EpidemiologicalRecord[]): void {
 export interface DiseaseCoordinatePoint {
   lat: number;
   lng: number;
+  species?: string;
+  country?: string;
+  year?: number;
 }
 
 export interface DiseaseCoordinateEntry {
@@ -436,6 +439,21 @@ export interface DiseaseCoordinateEntry {
 
 export type DiseaseCoordinatesMap = Record<string, DiseaseCoordinateEntry>;
 
+const AFRICA_BBOX = { minLat: -35, maxLat: 37, minLng: -20, maxLng: 55 };
+
+export function isAfricanPoint(lat: number, lng: number): boolean {
+  return lat >= AFRICA_BBOX.minLat && lat <= AFRICA_BBOX.maxLat && lng >= AFRICA_BBOX.minLng && lng <= AFRICA_BBOX.maxLng;
+}
+
+function sanitizeDiseaseCoords(map: DiseaseCoordinatesMap): DiseaseCoordinatesMap {
+  const clean: DiseaseCoordinatesMap = {};
+  for (const [disease, entry] of Object.entries(map)) {
+    const points = entry.points.filter((p) => isAfricanPoint(p.lat, p.lng));
+    if (points.length > 0) clean[disease] = { ...entry, points };
+  }
+  return clean;
+}
+
 let diseaseCoordsCache: DiseaseCoordinatesMap | null = null;
 
 export async function fetchDiseaseCoordinates(signal?: AbortSignal): Promise<DiseaseCoordinatesMap> {
@@ -445,7 +463,7 @@ export async function fetchDiseaseCoordinates(signal?: AbortSignal): Promise<Dis
     try {
       const res = await fetch("/genbank/disease-coordinates.json");
       if (res.ok) {
-        diseaseCoordsCache = await res.json();
+        diseaseCoordsCache = sanitizeDiseaseCoords(await res.json());
         return diseaseCoordsCache!;
       }
     } catch {}
@@ -457,7 +475,7 @@ export async function fetchDiseaseCoordinates(signal?: AbortSignal): Promise<Dis
     const res = await fetch(`${API_BASE}/epidemiological/meta/disease-coordinates`, { signal });
     if (!res.ok) throw new Error("API error");
     const json = await res.json();
-    diseaseCoordsCache = json.data;
+    diseaseCoordsCache = sanitizeDiseaseCoords(json.data);
     return diseaseCoordsCache!;
   } catch {
     diseaseCoordsCache = {};

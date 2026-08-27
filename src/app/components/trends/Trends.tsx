@@ -1,12 +1,127 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchEpidemiological, type EpidemiologicalRecord } from "../../lib/api";
 import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, SourceNote, PageLoader } from "../common/Atlas";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Brush } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Brush } from "recharts";
 
 function extractYear(raw: string | null): number | null {
   if (!raw) return null;
   const m = raw.match(/\b(19\d\d|20\d\d)\b/);
   return m ? parseInt(m[1]) : null;
+}
+
+const PIE_COLORS = [
+  "#0F766E", "#D97706", "#DC2626", "#2563EB", "#7C3AED",
+  "#DB2777", "#059669", "#EA580C", "#4F46E5", "#9333EA",
+  "#0891B2", "#B45309", "#14B8A6", "#BE185D", "#6D28D9",
+];
+
+function donutData(records: EpidemiologicalRecord[], pick: (r: EpidemiologicalRecord) => string | null, max = 10) {
+  const counts = new Map<string, number>();
+  records.forEach((r) => {
+    const key = pick(r);
+    if (!key) return;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, max)
+    .map(([name, count]) => ({ name, count }));
+}
+
+function TrendPie({
+  data,
+  title,
+  subtitle,
+  size = 190,
+  max = 12,
+}: {
+  data: { name: string; count: number }[];
+  title: string;
+  subtitle?: string;
+  size?: number;
+  max?: number;
+}) {
+  if (data.length === 0) return null;
+  const total = data.reduce((s, d) => s + d.count, 0);
+  const shown = data.slice(0, max);
+  const hidden = data.length - max;
+  return (
+    <Panel
+      title={
+        <div>
+          <div className="text-[13px] font-semibold" style={{ color: atlas.text }}>
+            {title}
+          </div>
+          {subtitle && (
+            <div className="text-[11px] mt-0.5 font-normal" style={{ color: atlas.textMuted }}>
+              {subtitle}
+            </div>
+          )}
+        </div>
+      }
+      className="flex flex-col"
+    >
+      <div className="flex items-start gap-5 p-4 flex-1 min-h-0">
+        <div style={{ width: size, height: size, flexShrink: 0 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius={size * 0.26}
+                outerRadius={size * 0.44}
+                paddingAngle={2}
+                dataKey="count"
+                nameKey="name"
+                strokeWidth={0}
+              >
+                {data.map((_, i) => (
+                  <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={tooltipStyle}
+                formatter={(value: number, name: string) => {
+                  const pct = total > 0 ? ((value / total) * 100).toFixed(1) : "0";
+                  return [`${value} (${pct}%)`, name];
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex-1 min-w-0 overflow-y-auto" style={{ maxHeight: 260 }}>
+          <div className="space-y-1">
+            {shown.map((d, i) => {
+              const pct = total > 0 ? ((d.count / total) * 100).toFixed(1) : "0";
+              return (
+                <div key={d.name} className="flex items-center gap-2 text-[11px]">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ background: PIE_COLORS[i % PIE_COLORS.length] }}
+                  />
+                  <span className="truncate flex-1" style={{ color: atlas.text }}>
+                    {d.name}
+                  </span>
+                  <span className="shrink-0 font-medium tabular-nums" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
+                    {d.count}
+                  </span>
+                  <span className="shrink-0 tabular-nums" style={{ color: atlas.textMuted, fontFamily: "monospace", fontSize: 10 }}>
+                    {pct}%
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          {hidden > 0 && (
+            <div className="text-[10px] mt-1" style={{ color: atlas.textMuted }}>
+              +{hidden} more
+            </div>
+          )}
+        </div>
+      </div>
+    </Panel>
+  );
 }
 
 const METRICS = [
@@ -59,6 +174,13 @@ export function Trends() {
     if (countryFilter !== "all") data = data.filter((r) => r.country === countryFilter);
     return data;
   }, [records, speciesFilter, countryFilter]);
+
+  const brushedRecords = useMemo(() => {
+    return filtered.filter((r) => {
+      const y = extractYear(r.yearOfStudy);
+      return y !== null && y >= brushRange[0] && y <= brushRange[1];
+    });
+  }, [filtered, brushRange]);
 
   const yearlyMap = useMemo(() => {
     const map = new Map<number, { records: number; species: Set<string>; hosts: Set<string>; diseases: Set<string>; countries: Set<string> }>();
@@ -115,6 +237,25 @@ export function Trends() {
     return { records: totalRecords, species: speciesSet.size, hosts: hostSet.size, diseases: diseaseSet.size, countries: countrySet.size };
   }, [brushedData, yearlyMap]);
 
+  const countryPie = useMemo(() => donutData(brushedRecords, (r) => r.country, 10), [brushedRecords]);
+  const speciesPie = useMemo(() => donutData(brushedRecords, (r) => r.species, 10), [brushedRecords]);
+  const hostsPie = useMemo(() => donutData(brushedRecords, (r) => r.relatedHosts, 10), [brushedRecords]);
+  const diseasesPie = useMemo(() => donutData(brushedRecords, (r) => r.epidemiologicalDisease, 10), [brushedRecords]);
+  const methodsPie = useMemo(() => donutData(brushedRecords, (r) => r.methodOfExtraction, 8), [brushedRecords]);
+
+  const decadeData = useMemo(() => {
+    const counts = new Map<string, number>();
+    brushedRecords.forEach((r) => {
+      const y = extractYear(r.yearOfStudy);
+      if (y === null) return;
+      const decade = `${Math.floor(y / 10) * 10}s`;
+      counts.set(decade, (counts.get(decade) || 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .sort(([a], [b]) => +a - +b)
+      .map(([name, count]) => ({ name, count }));
+  }, [brushedRecords]);
+
   const minYear = yearlyData.length > 0 ? parseInt(yearlyData[0].year) : 1930;
   const maxYear = yearlyData.length > 0 ? parseInt(yearlyData[yearlyData.length - 1].year) : 2025;
 
@@ -147,13 +288,6 @@ export function Trends() {
         />
 
         <FilterBar>
-          <FilterGroup label="Metric">
-            <Select value={metric} onChange={(v) => setMetric(v as MetricKey)} minWidth={150}>
-              {METRICS.map((m) => (
-                <option key={m.key} value={m.key}>{m.label}</option>
-              ))}
-            </Select>
-          </FilterGroup>
           <FilterGroup label="Species">
             <Select value={speciesFilter} onChange={setSpeciesFilter} minWidth={170}>
               <option value="all">All Species</option>
@@ -218,7 +352,7 @@ export function Trends() {
           }
           className="mb-6"
         >
-          <ResponsiveContainer width="100%" height={360}>
+          <ResponsiveContainer width="100%" height={340}>
             <AreaChart data={yearlyData}>
               <defs>
                 <linearGradient id="colorMetric" x1="0" y1="0" x2="0" y2="1">
@@ -269,61 +403,16 @@ export function Trends() {
           </ResponsiveContainer>
         </Panel>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Panel title="Top Species in Selected Range" className="h-full">
-            <div className="overflow-y-auto" style={{ maxHeight: 340 }}>
-              <table className="w-full text-[12px]">
-                <thead>
-                  <tr className="border-b" style={{ borderColor: atlas.border }}>
-                    <th className="text-left px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>#</th>
-                    <th className="text-left px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Species</th>
-                    <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Years Active</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(() => {
-                    const counts: Record<string, number> = {};
-                    brushedData.forEach((d) => {
-                      const yr = yearlyMap.get(parseInt(d.year));
-                      if (yr) yr.species.forEach((s) => { counts[s] = (counts[s] || 0) + 1; });
-                    });
-                    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([name, count], i) => (
-                      <tr key={name} className="border-b" style={{ borderColor: atlas.grid }}>
-                        <td className="px-3 py-1.5" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>{i + 1}</td>
-                        <td className="px-3 py-1.5 font-medium" style={{ color: atlas.text }}>{name}</td>
-                        <td className="px-3 py-1.5 text-right" style={{ color: atlas.textSub, fontFamily: "monospace" }}>{count}</td>
-                      </tr>
-                    ));
-                  })()}
-                </tbody>
-              </table>
-            </div>
-          </Panel>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+          <TrendPie title="Records by Country" subtitle="Geographic distribution of surveillance" data={countryPie} />
+          <TrendPie title="Tick Vectors Reported" subtitle="Species linked to pathogen records" data={speciesPie} />
+          <TrendPie title="Animal Hosts" subtitle="Known and suspected vertebrate hosts" data={hostsPie} />
+        </div>
 
-          <Panel title="Yearly Breakdown" className="h-full">
-            <div className="overflow-y-auto" style={{ maxHeight: 340 }}>
-              <table className="w-full text-[12px]">
-                <thead>
-                  <tr className="border-b" style={{ borderColor: atlas.border }}>
-                    <th className="text-left px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Year</th>
-                    <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Records</th>
-                    <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Species</th>
-                    <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Hosts</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {brushedData.slice().reverse().map((d) => (
-                    <tr key={d.year} className="border-b" style={{ borderColor: atlas.grid }}>
-                      <td className="px-3 py-1.5 font-medium" style={{ color: atlas.text, fontFamily: "monospace" }}>{d.year}</td>
-                      <td className="px-3 py-1.5 text-right" style={{ color: atlas.textSub, fontFamily: "monospace" }}>{d.records.toLocaleString()}</td>
-                      <td className="px-3 py-1.5 text-right" style={{ color: atlas.textSub, fontFamily: "monospace" }}>{d.species}</td>
-                      <td className="px-3 py-1.5 text-right" style={{ color: atlas.textSub, fontFamily: "monospace" }}>{d.hosts}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Panel>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+          <TrendPie title="Pathogens Reported" subtitle="Diseases detected in tick surveillance" data={diseasesPie} />
+          <TrendPie title="Sampling Methods" subtitle="How pathogens were detected" data={methodsPie} max={8} />
+          <TrendPie title="Records by Decade" subtitle="Surveillance cadence over time" data={decadeData} max={12} />
         </div>
 
         <SourceNote />

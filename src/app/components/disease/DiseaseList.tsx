@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { fetchEpidemiological, fetchEpidemiologicalMeta, fetchDiseaseCoordinates, type EpidemiologicalRecord, type EpidemiologicalMeta, type DiseaseCoordinatesMap, filterAfricanRecords } from "../../lib/api";
 import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader } from "../common/Atlas";
+import { EvidenceMap } from "../common/EvidenceMap";
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import maplibregl from "maplibre-gl";
 
 const DISEASE_COLORS: Record<string, string> = {
   "Rickettsia": "#DC2626",
@@ -75,97 +75,8 @@ function DonutPie({ data, colors, size = 160 }: { data: { name: string; count: n
   );
 }
 
-function DiseaseMiniMap({ records, diseaseCoords }: { records: EpidemiologicalRecord[]; diseaseCoords: DiseaseCoordinatesMap }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-
-  useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
-
-    const features: GeoJSON.Feature[] = [];
-    for (const r of records) {
-      const disease = r.epidemiologicalDisease;
-      if (!disease) continue;
-      const entry = diseaseCoords[disease];
-      if (!entry || entry.points.length === 0) continue;
-      for (const pt of entry.points) {
-        features.push({
-          type: "Feature",
-          geometry: { type: "Point", coordinates: [pt.lng, pt.lat] },
-          properties: { disease, species: r.species || "" },
-        });
-      }
-    }
-
-    if (features.length === 0) return;
-
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: "https://tiles.openfreemap.org/styles/liberty",
-      bounds: [[-20, -35], [55, 37]],
-      attributionControl: false,
-    });
-
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
-
-    map.on("load", () => {
-      map.addSource("disease-points", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features },
-      });
-
-      map.addLayer({
-        id: "disease-heatmap",
-        type: "heatmap",
-        source: "disease-points",
-        paint: {
-          "heatmap-weight": 1,
-          "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 1, 6, 3],
-          "heatmap-color": [
-            "interpolate", ["linear"], ["heatmap-density"],
-            0, "rgba(236,253,245,0)",
-            0.2, "rgba(16,185,129,0.3)",
-            0.4, "rgba(16,185,129,0.5)",
-            0.6, "rgba(15,118,110,0.7)",
-            0.8, "rgba(15,118,110,0.85)",
-            1, "rgba(13,70,67,1)",
-          ],
-          "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 15, 6, 35],
-          "heatmap-opacity": 0.8,
-        },
-      });
-
-      map.addLayer({
-        id: "disease-circles",
-        type: "circle",
-        source: "disease-points",
-        paint: {
-          "circle-radius": 5,
-          "circle-color": "#0F766E",
-          "circle-stroke-color": "#FFFFFF",
-          "circle-stroke-width": 1.5,
-          "circle-opacity": 0.85,
-        },
-      });
-
-      const popup = new maplibregl.Popup({ closeButton: false, maxWidth: "220px" });
-      map.on("mouseenter", "disease-circles", (e) => {
-        map.getCanvas().style.cursor = "pointer";
-        const f = e.features?.[0];
-        if (!f) return;
-        popup
-          .setHTML(`<div style="font-family:system-ui;font-size:12px;line-height:1.5"><div style="font-weight:600">${f.properties?.species || "Tick species"}</div><div style="color:#0F766E;font-family:monospace;font-size:11px">${f.properties?.disease || ""}</div></div>`)
-          .setLngLat(e.lngLat)
-          .addTo(map);
-      });
-      map.on("mouseleave", "disease-circles", () => { map.getCanvas().style.cursor = ""; popup.remove(); });
-    });
-
-    mapRef.current = map;
-    return () => { map.remove(); mapRef.current = null; };
-  }, [records, diseaseCoords]);
-
-  return <div ref={containerRef} className="w-full h-full min-h-[300px]" />;
+function DiseaseMiniMap({ records, diseaseCoords, diseaseName }: { records: EpidemiologicalRecord[]; diseaseCoords: DiseaseCoordinatesMap; diseaseName: string }) {
+  return <EvidenceMap entry={diseaseCoords[diseaseName]} diseaseName={diseaseName} />;
 }
 
 export function DiseaseList() {
@@ -322,7 +233,7 @@ export function DiseaseList() {
 
               <Panel title="Geographic Distribution" className="mb-6">
                 <div style={{ height: 360 }}>
-                  <DiseaseMiniMap records={records} diseaseCoords={diseaseCoords} />
+                  <DiseaseMiniMap records={records} diseaseCoords={diseaseCoords} diseaseName={selected} />
                 </div>
               </Panel>
 
