@@ -180,12 +180,30 @@ export function DiseaseList() {
 
         <FilterBar>
           <FilterGroup label="Pathogen Category">
-            <Select value={categoryFilter} onChange={setCategoryFilter} minWidth={230}>
-              <option value="all">All pathogens</option>
-              {FEBRILE_CATEGORIES.map((c) => (
-                <option key={c.key} value={c.key}>{c.label}</option>
+            <div
+              className="flex items-center gap-1 p-1"
+              style={{ border: `1px solid ${atlas.border}`, borderRadius: 10, background: "#FFFFFF" }}
+            >
+              {[{ key: "all", label: "All" }, ...FEBRILE_CATEGORIES].map((c) => (
+                <button
+                  key={c.key}
+                  onClick={() => setCategoryFilter(c.key)}
+                  className="transition-colors"
+                  style={{
+                    padding: "5px 12px",
+                    borderRadius: 7,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    background: categoryFilter === c.key ? atlas.teal : "transparent",
+                    color: categoryFilter === c.key ? "#FFFFFF" : atlas.textSub,
+                  }}
+                >
+                  {c.label}
+                </button>
               ))}
-            </Select>
+            </div>
           </FilterGroup>
           <FilterGroup label="Disease">
             <Select value={selected} onChange={setSelected} minWidth={340}>
@@ -197,7 +215,7 @@ export function DiseaseList() {
           </FilterGroup>
           {categoryFilter !== "all" && (
             <Chip tone="amber">
-              {FEBRILE_CATEGORIES.find((c) => c.key === categoryFilter)?.label} &middot; classified by genus
+              {filteredDiseases.length} diseases &middot; {FEBRILE_CATEGORIES.find((c) => c.key === categoryFilter)?.description}
             </Chip>
           )}
           {selected && selectedData && (
