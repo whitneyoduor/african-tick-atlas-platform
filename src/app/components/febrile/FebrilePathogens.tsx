@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   fetchEpidemiological,
-  fetchDiseaseCoordinates,
   type EpidemiologicalRecord,
-  type DiseaseCoordinatesMap,
   filterAfricanRecords,
 } from "../../lib/api";
 import {
@@ -11,10 +9,9 @@ import {
   FEBRILE_GENERA,
   FEBRILE_GENERA_MAP,
   febrileGeneraOfRecord,
-  buildFebrileEntry,
 } from "../../lib/febrile";
 import { atlas, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader } from "../common/Atlas";
-import { EvidenceMap } from "../common/EvidenceMap";
+import { ChoroplethMap, fetchChoroplethData, type ChoroplethData } from "./ChoroplethMap";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 const GENUS_COLORS = FEBRILE_GENERA.map((g) => g.color);
@@ -61,7 +58,7 @@ function DonutLegend({
 
 export function FebrilePathogens() {
   const [records, setRecords] = useState<EpidemiologicalRecord[]>([]);
-  const [diseaseCoords, setDiseaseCoords] = useState<DiseaseCoordinatesMap>({});
+  const [choropleth, setChoropleth] = useState<ChoroplethData | null>(null);
   const [loading, setLoading] = useState(true);
   const [mapFilter, setMapFilter] = useState("all");
 
@@ -77,8 +74,8 @@ export function FebrilePathogens() {
       .catch(() => {
         if (active) setLoading(false);
       });
-    fetchDiseaseCoordinates()
-      .then((dc) => { if (active) setDiseaseCoords(dc); })
+    fetchChoroplethData()
+      .then((d) => { if (active) setChoropleth(d); })
       .catch(() => {});
     return () => { active = false; };
   }, []);
@@ -161,10 +158,21 @@ export function FebrilePathogens() {
     return FEBRILE_GENERA_MAP[mapFilter]?.label || "Febrile pathogens";
   }, [mapFilter]);
 
-  const mapEntry = useMemo(
-    () => buildFebrileEntry(diseaseCoords, mapKeys),
-    [diseaseCoords, mapKeys]
-  );
+  const choroTotals = useMemo(() => {
+    if (!choropleth) return { points: 0, total: 0, mapped: 0, unmapped: 0 };
+    const isTotal = mapKeys.length >= FEBRILE_GENERA.length;
+    const points = choropleth.features.reduce((sum, f) => {
+      const p = f.properties as Record<string, number>;
+      if (isTotal) return sum + (p.d_total || 0);
+      return sum + mapKeys.reduce((s, k) => s + (p[`d_${k}`] || 0), 0);
+    }, 0);
+    return {
+      points,
+      total: choropleth.meta.total,
+      mapped: choropleth.meta.mapped,
+      unmapped: choropleth.meta.total - choropleth.meta.mapped,
+    };
+  }, [choropleth, mapKeys]);
 
   const genusPieData = useMemo(
     () => classified.genusRows.map((r) => ({ name: r.genus.label, count: r.records })),
@@ -390,11 +398,11 @@ export function FebrilePathogens() {
                 Geographic Distribution
               </h3>
               <p className="text-[11px] mt-0.5" style={{ color: atlas.textMuted }}>
-                Occurrence points rolled up by pathogen genus
+                Occurrence points per admin region, coloured by pathogen layer
               </p>
             </div>
             <span className="text-[11px] tabular-nums" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
-              {mapEntry.totalPoints.toLocaleString()} points
+              {choroTotals.points.toLocaleString()} points in mapped regions
             </span>
           </div>
           <FilterBar>
@@ -410,13 +418,16 @@ export function FebrilePathogens() {
             </FilterGroup>
             {mapFilter !== "all" && (
               <Chip tone="amber">
-                {mapLabel} &middot; {mapEntry.totalPoints.toLocaleString()} points
+                {mapLabel} &middot; {choroTotals.points.toLocaleString()} points
               </Chip>
             )}
           </FilterBar>
-          <div style={{ height: 420 }}>
-            <EvidenceMap entry={mapEntry} diseaseName={mapLabel} />
-          </div>
+          <ChoroplethMap data={choropleth} keys={mapKeys} />
+          {choropleth && choroTotals.unmapped > 0 && (
+            <div className="text-[10px] px-5 py-2" style={{ color: atlas.textMuted, borderTop: `1px solid ${atlas.grid}` }}>
+              {choroTotals.unmapped.toLocaleString()} of {choroTotals.total.toLocaleString()} febrile occurrence points fall outside mapped admin regions
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
