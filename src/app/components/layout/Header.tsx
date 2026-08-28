@@ -7,6 +7,7 @@ const navItems = [
   { path: "/febrile", label: "Febrile Pathogens" },
   { path: "/species", label: "Species" },
   { path: "/diseases", label: "Diseases" },
+  { path: "/health", label: "Health Access" },
   { path: "/environmental", label: "Tick Cohort" },
   { path: "/downloads", label: "Downloads" },
   { path: "/about", label: "About" },
