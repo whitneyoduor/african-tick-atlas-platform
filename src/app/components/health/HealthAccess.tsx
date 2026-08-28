@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { atlas, PageHeader, StatCards, Panel, FilterBar, Chip, SourceNote, PageLoader } from "../common/Atlas";
 import {
   fetchLivestock,
+  fetchCountries,
   fetchFacilities,
   HealthMap,
   METRICS,
   FAC_CLASSES,
   type MetricKey,
   type LivestockData,
+  type LivestockCountries,
+  type LivestockCountryFeature,
 } from "./HealthMap";
 
 function fmtD(v: number): string {
@@ -23,17 +26,20 @@ function fmtH(v: number): string {
 
 export function HealthAccess() {
   const [data, setData] = useState<LivestockData | null>(null);
+  const [countries, setCountries] = useState<LivestockCountries | null>(null);
   const [facilities, setFacilities] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState<MetricKey>("cattle");
   const [showFacilities, setShowFacilities] = useState(false);
+  const [selectedG0, setSelectedG0] = useState<string>("");
 
   useEffect(() => {
     let active = true;
-    Promise.all([fetchLivestock(), fetchFacilities()])
-      .then(([lv, fc]) => {
+    Promise.all([fetchLivestock(), fetchCountries(), fetchFacilities()])
+      .then(([lv, ct, fc]) => {
         if (!active) return;
         setData(lv);
+        setCountries(ct);
         setFacilities(fc);
         setLoading(false);
       })
@@ -66,6 +72,16 @@ export function HealthAccess() {
       .sort((a, b) => (b[`${metric}_tot`] || 0) - (a[`${metric}_tot`] || 0))
       .slice(0, 8);
   }, [data, metric]);
+
+  const countryOptions = useMemo(() => {
+    if (!data) return [];
+    return [...data.meta.countries].sort((a, b) => a.name.localeCompare(b.name));
+  }, [data]);
+
+  const focus = useMemo<LivestockCountryFeature | null>(() => {
+    if (!selectedG0 || !countries) return null;
+    return countries.features.find((f) => f.properties.G0 === selectedG0) || null;
+  }, [selectedG0, countries]);
 
   if (loading) return <PageLoader />;
 
@@ -178,11 +194,40 @@ export function HealthAccess() {
             >
               Facilities {showFacilities ? "on" : "off"}
             </button>
+            <label className="flex items-center gap-2 text-[12px] font-medium" style={{ color: atlas.textSub }}>
+              Country
+              <select
+                value={selectedG0}
+                onChange={(e) => setSelectedG0(e.target.value)}
+                className="rounded-full px-3 py-1.5 bg-white text-[12px] font-medium cursor-pointer outline-none"
+                style={{ color: atlas.text, border: `1px solid ${atlas.borderStrong}` }}
+              >
+                <option value="">All countries</option>
+                {countryOptions.map((c) => (
+                  <option key={c.gid} value={c.gid}>{c.name}</option>
+                ))}
+              </select>
+            </label>
             <span className="text-[11px]" style={{ color: atlas.textMuted }}>
-              Hover a district for its {activeMetric.label.toLowerCase()} density and total heads
+              Hover a country for its totals; pick one to zoom
             </span>
           </FilterBar>
-          <HealthMap data={data} facilities={facilities} metric={metric} showFacilities={showFacilities} />
+          {focus && (
+            <div
+              className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-2 text-[12px]"
+              style={{ borderBottom: `1px solid ${atlas.grid}`, background: "#F1F7F6", color: atlas.text }}
+            >
+              <span className="font-semibold">{focus.properties.CN}</span>
+              <span className="tabular-nums" style={{ fontFamily: "monospace" }}>
+                {fmtH(focus.properties[`${metric}_tot`] || 0)} {activeMetric.label.toLowerCase()} heads total
+              </span>
+              <span className="tabular-nums" style={{ fontFamily: "monospace" }}>
+                {fmtD(focus.properties[metric] || 0)} /km² mean
+              </span>
+              <span style={{ color: atlas.textMuted }}>{focus.properties.districts} districts</span>
+            </div>
+          )}
+          <HealthMap data={data} countries={countries} facilities={facilities} metric={metric} showFacilities={showFacilities} focus={focus} />
           {data && (
             <div className="text-[10px] px-5 py-2" style={{ color: atlas.textMuted, borderTop: `1px solid ${atlas.grid}` }}>
               {data.meta.regions.toLocaleString()} districts · {data.meta.countries.length} countries · {data.meta.resolution} · {data.meta.years}
@@ -223,10 +268,10 @@ export function HealthAccess() {
           <div className="text-[12px] leading-relaxed" style={{ color: atlas.textSub }}>
             Livestock counts come from the 2015 Gridded Livestock of the World layers: cattle, goat and sheep heads per ~8 km grid
             cell, derived from national censuses and remote-sensed land use. Zonal statistics re-aggregate those cells to the
-            boundaries you see — the GADM level-2 districts used across the atlas. Each district stores a mean density (total
-            heads ÷ district area, in heads/km²) and the summed herd size, so every country is identifiable on hover. Facility
-            locations come from a 2015 census of sub-Saharan health facilities (98,745 records; 96,395 with valid coordinates),
-            typed by service tier.
+            GADM level-2 districts used across the atlas. District fills are shaded by mean density, dark country borders outline
+            each nation, and hovering anywhere in a country reports that country's total herd sizes and mean density. The country
+            picker above zooms to and highlights the selected nation. Facility locations come from a 2015 census of sub-Saharan
+            health facilities (98,745 records; 96,395 with valid coordinates), typed by service tier.
           </div>
         </Panel>
 

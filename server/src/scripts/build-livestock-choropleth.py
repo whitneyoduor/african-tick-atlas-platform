@@ -192,6 +192,69 @@ for cu in countries.values():
     country_rows.append(row)
 country_rows.sort(key=lambda r: max(r.get("cattle_tot", 0), r.get("goat_tot", 0), r.get("sheep_tot", 0)), reverse=True)
 
+print("dissolving ADM2 -> ADM0...")
+from shapely.geometry import shape, mapping
+from shapely.ops import unary_union
+from shapely import make_valid
+
+dist_geoms = {}
+for f in features:
+    g = clean_geom(f["geom"])
+    if g:
+        dist_geoms.setdefault(f["g0"], []).append(shape(g))
+
+def _union(geoms):
+    fixed = [make_valid(g) if not g.is_valid else g for g in geoms]
+    merged = unary_union(fixed)
+    if merged.geom_type != "GeometryCollection":
+        return merged
+    parts = [p for p in merged.geoms if p.geom_type in ("Polygon", "MultiPolygon")]
+    if not parts:
+        return merged
+    return unary_union([make_valid(p) for p in parts]) if len(parts) > 1 else parts[0]
+
+def round_coords(geom):
+    if geom["type"] == "Polygon":
+        return {"type": "Polygon", "coordinates": [
+            [[round(x, 3), round(y, 3)] for x, y in ring] for ring in geom["coordinates"]
+        ]}
+    if geom["type"] == "MultiPolygon":
+        return {"type": "MultiPolygon", "coordinates": [
+            [[[round(x, 3), round(y, 3)] for x, y in ring] for ring in poly] for poly in geom["coordinates"]
+        ]}
+    return geom
+
+country_features = []
+for g0, geoms in dist_geoms.items():
+    if not geoms:
+        continue
+    merged = _union(geoms)
+    if merged.is_empty or merged.geom_type not in ("Polygon", "MultiPolygon"):
+        continue
+    merged = merged.simplify(0.005, preserve_topology=True)
+    if merged.is_empty or merged.geom_type not in ("Polygon", "MultiPolygon"):
+        continue
+    rep = merged.representative_point()
+    cu = countries.get(g0)
+    if not cu:
+        continue
+    props = {
+        "G0": g0,
+        "CN": cu["name"] or g0,
+        "centroid": [round(rep.x, 3), round(rep.y, 3)],
+        "districts": len(geoms),
+    }
+    for k in ("cattle", "goat", "sheep"):
+        props[k] = round(cu["heads"][k] / cu["area"], 2) if cu["area"] > 0 else 0.0
+        props[k + "_tot"] = int(round(cu["heads"][k]))
+    country_features.append({"type": "Feature", "properties": props, "geometry": round_coords(mapping(merged))})
+
+COUNTRIES_OUT = os.path.join(PUB, "livestock-countries.geojson")
+with open(COUNTRIES_OUT, "w", encoding="utf-8") as fh:
+    json.dump({"type": "FeatureCollection", "features": country_features}, fh, ensure_ascii=False, separators=(",", ":"))
+print("country features:", len(country_features))
+print("countries asset MB:", round(os.path.getsize(COUNTRIES_OUT) / 1e6, 2))
+
 meta = {
     "unit": "heads per km²",
     "years": "2015",
