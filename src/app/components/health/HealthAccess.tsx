@@ -26,7 +26,7 @@ export function HealthAccess() {
   const [facilities, setFacilities] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState<MetricKey>("cattle");
-  const [showFacilities, setShowFacilities] = useState(true);
+  const [showFacilities, setShowFacilities] = useState(false);
 
   useEffect(() => {
     let active = true;

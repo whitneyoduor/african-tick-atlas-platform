@@ -5,9 +5,9 @@ import { atlas } from "../common/Atlas";
 export type MetricKey = "cattle" | "goat" | "sheep";
 
 export const METRICS: { key: MetricKey; label: string; unit: string; color: string }[] = [
-  { key: "cattle", label: "Cattle", unit: "heads/km²", color: "#B45309" },
-  { key: "goat", label: "Goat", unit: "heads/km²", color: "#0E7490" },
-  { key: "sheep", label: "Sheep", unit: "heads/km²", color: "#7C3AED" },
+  { key: "cattle", label: "Cattle", unit: "heads/km²", color: "#D97706" },
+  { key: "goat", label: "Goat", unit: "heads/km²", color: "#0F766E" },
+  { key: "sheep", label: "Sheep", unit: "heads/km²", color: "#BE123C" },
 ];
 
 export interface LivestockCountryRow {
@@ -37,8 +37,6 @@ export interface LivestockData {
   features: any[];
 }
 
-type AnyGeoJSON = any;
-
 export const FAC_CLASSES = [
   { key: "Hospital", color: "#DC2626" },
   { key: "Clinic", color: "#F59E0B" },
@@ -47,9 +45,10 @@ export const FAC_CLASSES = [
   { key: "Other", color: "#9CA3AF" },
 ];
 
-const CLUSTER_COLORS = ["#D1FAE5", "#5EEAD4", "#2DD4BF", "#0F766E", "#134E4A"];
+type AnyGeoJSON = any;
 
-const RAMP = ["#F1F5F9", "#FEF9C3", "#FDE68A", "#FCD34D", "#F59E0B", "#D97706", "#92400E"];
+const RAMP = ["#EEF1F5", "#FEF3C7", "#FDE68A", "#FBBF24", "#F97316", "#DC2626", "#991B1B"];
+const CLUSTER_COLORS = ["#D1FAE5", "#5EEAD4", "#2DD4BF", "#0F766E", "#134E4A"];
 
 let livestockCache: Promise<LivestockData> | null = null;
 export function fetchLivestock(): Promise<LivestockData> {
@@ -70,7 +69,7 @@ function breaksFor(values: number[]): number[] {
   if (nz.length === 0) return [0];
   const max = nz[nz.length - 1];
   const q = (p: number) => nz[Math.min(nz.length - 1, Math.floor((nz.length - 1) * p))];
-  const set = Array.from(new Set([0, q(0.2), q(0.4), q(0.6), q(0.8), q(0.95), max])).sort((a, b) => a - b);
+  const set = Array.from(new Set([0, q(0.25), q(0.5), q(0.75), q(0.9), max])).sort((a, b) => a - b);
   return set.length > 1 ? set : [0, max];
 }
 
@@ -91,13 +90,11 @@ export function HealthMap({
   facilities,
   metric,
   showFacilities,
-  height = 520,
 }: {
   data: LivestockData | null;
   facilities: AnyGeoJSON | null;
   metric: MetricKey;
   showFacilities: boolean;
-  height?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -131,9 +128,8 @@ export function HealthMap({
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: "https://tiles.openfreemap.org/styles/liberty",
-      bounds: [[-26, -36], [55, 38]],
+      bounds: [[-20, -35], [55, 37]],
       attributionControl: false,
-      maxZoom: 7,
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.on("load", () => {
@@ -258,10 +254,10 @@ export function HealthMap({
   }, [mapReady, showFacilities]);
 
   useEffect(() => {
-    if (!mapReady) return;
+    if (!mapReady || !data) return;
     const map = mapRef.current;
     if (!map) return;
-    const popup = new maplibregl.Popup({ closeButton: false, maxWidth: "300px" });
+    const popup = new maplibregl.Popup({ closeButton: false, maxWidth: "280px" });
     const hlSrc = map.getSource("hl") as maplibregl.GeoJSONSource;
 
     map.on("mousemove", "rgn-fill", (e) => {
@@ -274,14 +270,14 @@ export function HealthMap({
       const m = METRICS.find((x) => x.key === k) || METRICS[0];
       const rows = METRICS.map(
         (x) => `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
-          <span style="width:8px;height:8px;border-radius:50%;background:${x.color};display:inline-block"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:${RAMP[4]};display:inline-block"></span>
           <span style="flex:1">${x.label}</span>
-          <span style="font-weight:600;font-family:monospace">${fmtDensity(p[x.key] || 0)}/km² · ${fmtHeads(p[x.key + "_tot"] || 0)}</span>
+          <span style="font-weight:600;font-family:monospace">${fmtDensity(p[x.key] || 0)} ${x.unit} · ${fmtHeads(p[x.key + "_tot"] || 0)} heads</span>
         </div>`).join("");
       popup.setHTML(`
         <div style="font-family:system-ui;font-size:12px;line-height:1.5">
           <div style="font-weight:700">${p.N2 || p.N1 || "District"}</div>
-          <div style="color:#64748B;font-size:11px">${[p.N1, p.CN].filter(Boolean).join(" · ")}</div>
+          <div style="color:#64748B;font-size:11px">${[p.N1, p.CN].filter(Boolean).join(" · ") || ""}</div>
           <div style="margin-top:4px">
             <span style="font-weight:700;font-family:monospace">${fmtDensity(p[k] || 0)}</span> ${m.unit} mean ${m.label.toLowerCase()} density
           </div>
@@ -338,13 +334,13 @@ export function HealthMap({
       map.off("click", "fac-point");
       popup.remove();
     };
-  }, [mapReady]);
+  }, [mapReady, data]);
 
   const legendMax = stops[stops.length - 1]?.v || 0;
   const legendMid = stops[Math.floor(stops.length / 2)]?.v || 0;
 
   return (
-    <div className="relative w-full" style={{ height }}>
+    <div className="relative w-full" style={{ height: 420 }}>
       <div ref={containerRef} className="w-full h-full" />
       {!data && (
         <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#F8FAFC" }}>
@@ -354,38 +350,16 @@ export function HealthMap({
       {data && (
         <div
           className="absolute left-3 bottom-3 rounded-md px-3 py-2"
-          style={{ background: "rgba(255,255,255,0.94)", border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow, maxWidth: 230 }}
+          style={{ background: "rgba(255,255,255,0.94)", border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow, maxWidth: 220 }}
         >
           <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: atlas.textMuted }}>
             {activeMetric.label} · {activeMetric.unit}
           </div>
-          <div
-            className="h-2 rounded"
-            style={{ background: `linear-gradient(90deg, ${stops.map((s) => s.c).join(",")})` }}
-          />
+          <div className="h-2 rounded" style={{ background: `linear-gradient(90deg, ${stops.map((s) => s.c).join(",")})` }} />
           <div className="flex justify-between text-[10px] mt-1 tabular-nums" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
             <span>0</span>
             <span>{fmtDensity(legendMid)}</span>
             <span>{fmtDensity(legendMax)}</span>
-          </div>
-          <div className="text-[9px] mt-1" style={{ color: atlas.textMuted }}>per GADM district · zonal mean {data.meta.resolution}</div>
-        </div>
-      )}
-      {showFacilities && (
-        <div
-          className="absolute right-3 top-3 rounded-md px-3 py-2"
-          style={{ background: "rgba(255,255,255,0.94)", border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow }}
-        >
-          <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: atlas.textMuted }}>
-            Facilities by type
-          </div>
-          <div className="space-y-1">
-            {FAC_CLASSES.map((c) => (
-              <div key={c.key} className="flex items-center gap-2 text-[11px]">
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
-                <span style={{ color: atlas.textSub }}>{c.key}</span>
-              </div>
-            ))}
           </div>
         </div>
       )}
