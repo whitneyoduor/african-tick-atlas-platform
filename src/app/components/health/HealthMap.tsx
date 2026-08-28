@@ -2,37 +2,39 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import { atlas } from "../common/Atlas";
 
-export interface HealthLayerStats {
-  cells: number;
-  median_min: number;
-  within_60_pct: number;
-  within_120_pct: number;
-  within_240_pct: number;
+export type MetricKey = "cattle" | "goat" | "sheep";
+
+export const METRICS: { key: MetricKey; label: string; unit: string; color: string }[] = [
+  { key: "cattle", label: "Cattle", unit: "heads/km²", color: "#B45309" },
+  { key: "goat", label: "Goat", unit: "heads/km²", color: "#0E7490" },
+  { key: "sheep", label: "Sheep", unit: "heads/km²", color: "#7C3AED" },
+];
+
+export interface LivestockCountryRow {
+  gid: string;
+  name: string;
+  cattle: number;
+  goat: number;
+  sheep: number;
+  cattle_tot: number;
+  goat_tot: number;
+  sheep_tot: number;
 }
 
-export interface HealthLayer {
-  id: string;
-  title: string;
-  detail: string;
-  units: string;
-  tiles: number;
-  stats: HealthLayerStats;
+export interface LivestockMeta {
+  unit: string;
+  years: string;
+  resolution: string;
+  source: string;
+  africa: { cattle: number; goat: number; sheep: number };
+  countries: LivestockCountryRow[];
+  regions: number;
 }
 
-export interface HealthFacilitiesMeta {
-  total: number;
-  mapped: number;
-  dropped: number;
-  countries: number;
-  classes: Record<string, number>;
-  ownership: Record<string, number>;
-}
-
-export interface HealthMeta {
-  breaks: number[];
-  colors: number[][];
-  layers: HealthLayer[];
-  facilities: HealthFacilitiesMeta;
+export interface LivestockData {
+  type: "FeatureCollection";
+  meta: LivestockMeta;
+  features: any[];
 }
 
 type AnyGeoJSON = any;
@@ -46,12 +48,15 @@ export const FAC_CLASSES = [
 ];
 
 const CLUSTER_COLORS = ["#D1FAE5", "#5EEAD4", "#2DD4BF", "#0F766E", "#134E4A"];
-const TILE_PATTERN = (id: string) => `/health/traveltime/${id}/{z}/{x}/{y}.png`;
 
-let metaCache: Promise<HealthMeta> | null = null;
-export function fetchHealthMeta(): Promise<HealthMeta> {
-  if (!metaCache) metaCache = fetch("/health/meta.json").then((r) => r.json());
-  return metaCache;
+const RAMP = ["#F1F5F9", "#FEF9C3", "#FDE68A", "#FCD34D", "#F59E0B", "#D97706", "#92400E"];
+
+let livestockCache: Promise<LivestockData> | null = null;
+export function fetchLivestock(): Promise<LivestockData> {
+  if (!livestockCache) {
+    livestockCache = fetch("/health/livestock-choropleth.geojson").then((r) => r.json());
+  }
+  return livestockCache;
 }
 
 let facCache: Promise<AnyGeoJSON> | null = null;
@@ -60,24 +65,66 @@ export function fetchFacilities(): Promise<AnyGeoJSON> {
   return facCache;
 }
 
+function breaksFor(values: number[]): number[] {
+  const nz = values.filter((v) => v > 0).sort((a, b) => a - b);
+  if (nz.length === 0) return [0];
+  const max = nz[nz.length - 1];
+  const q = (p: number) => nz[Math.min(nz.length - 1, Math.floor((nz.length - 1) * p))];
+  const set = Array.from(new Set([0, q(0.2), q(0.4), q(0.6), q(0.8), q(0.95), max])).sort((a, b) => a - b);
+  return set.length > 1 ? set : [0, max];
+}
+
+function fmtDensity(v: number): string {
+  if (v < 1) return v.toFixed(2);
+  return v.toLocaleString(undefined, { maximumFractionDigits: 1 });
+}
+
+function fmtHeads(v: number): string {
+  if (v >= 1e9) return `${(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+  if (v >= 1e3) return `${(v / 1e3).toFixed(1)}k`;
+  return v.toLocaleString();
+}
+
 export function HealthMap({
-  layers,
-  activeId,
+  data,
+  facilities,
+  metric,
   showFacilities,
+  height = 520,
 }: {
-  layers: HealthLayer[];
-  activeId: string;
+  data: LivestockData | null;
+  facilities: AnyGeoJSON | null;
+  metric: MetricKey;
   showFacilities: boolean;
+  height?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  const activeRef = useRef(activeId);
-  activeRef.current = activeId;
+  const metricRef = useRef(metric);
+  metricRef.current = metric;
   const showFacRef = useRef(showFacilities);
   showFacRef.current = showFacilities;
 
-  const activeLayer = useMemo(() => layers.find((l) => l.id === activeId) || layers[0], [layers, activeId]);
+  const activeMetric = METRICS.find((m) => m.key === metric) || METRICS[0];
+
+  const stops = useMemo(() => {
+    if (!data) return [{ v: 0, c: RAMP[0] }, { v: 1, c: RAMP[RAMP.length - 1] }];
+    const values = data.features.map((f) => f.properties[metricRef.current] || 0);
+    const breaks = breaksFor(values);
+    const colors = breaks.map((_, i) => RAMP[Math.min(RAMP.length - 1, i)]);
+    return breaks.map((v, i) => ({ v, c: colors[Math.min(i, colors.length - 1)] }));
+  }, [data, metric]);
+
+  const paintExpr = useMemo<AnyGeoJSON>(() => {
+    const expr: AnyGeoJSON = ["interpolate", ["linear"], ["number", ["get", metricRef.current]]];
+    for (const s of stops) expr.push(s.v, s.c);
+    return expr;
+  }, [stops, metric]);
+
+  const paintExprRef = useRef(paintExpr);
+  paintExprRef.current = paintExpr;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -90,22 +137,26 @@ export function HealthMap({
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.on("load", () => {
-      for (const l of layers) {
-        map.addSource("tt-" + l.id, {
-          type: "raster",
-          tiles: [TILE_PATTERN(l.id)],
-          tileSize: 256,
-          minzoom: 3,
-          maxzoom: 6,
-        });
-        map.addLayer({
-          id: "tt-layer-" + l.id,
-          type: "raster",
-          source: "tt-" + l.id,
-          layout: { visibility: l.id === activeRef.current ? "visible" : "none" },
-          paint: { "raster-opacity": 0.85, "raster-fade-duration": 0 },
-        });
-      }
+      map.addSource("rgn", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addSource("hl", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({
+        id: "rgn-fill",
+        type: "fill",
+        source: "rgn",
+        paint: { "fill-color": paintExprRef.current, "fill-opacity": 0.92 },
+      });
+      map.addLayer({
+        id: "rgn-line",
+        type: "line",
+        source: "rgn",
+        paint: { "line-color": "#FFFFFF", "line-width": 0.4, "line-opacity": 0.9 },
+      });
+      map.addLayer({
+        id: "hl-line",
+        type: "line",
+        source: "hl",
+        paint: { "line-color": "#0F766E", "line-width": 2, "line-opacity": 0.95 },
+      });
       map.addSource("fac", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -175,40 +226,74 @@ export function HealthMap({
       mapRef.current = null;
       setMapReady(false);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layers]);
+  }, []);
+
+  useEffect(() => {
+    if (!mapReady || !data) return;
+    const src = mapRef.current?.getSource("rgn") as maplibregl.GeoJSONSource | undefined;
+    if (src) src.setData(data as AnyGeoJSON);
+  }, [mapReady, data]);
+
+  useEffect(() => {
+    if (!mapReady || !facilities) return;
+    const src = mapRef.current?.getSource("fac") as maplibregl.GeoJSONSource | undefined;
+    if (src) src.setData(facilities);
+  }, [mapReady, facilities]);
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+    if (mapRef.current.getLayer("rgn-fill")) {
+      mapRef.current.setPaintProperty("rgn-fill", "fill-color", paintExpr);
+    }
+  }, [mapReady, paintExpr]);
 
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
     const map = mapRef.current;
-    for (const l of layers) {
-      map.setLayoutProperty("tt-layer-" + l.id, "visibility", l.id === activeRef.current ? "visible" : "none");
+    for (const id of ["fac-point", "fac-cluster", "fac-cluster-label"]) {
+      if (map.getLayer(id)) {
+        map.setLayoutProperty(id, "visibility", showFacRef.current ? "visible" : "none");
+      }
     }
-  }, [mapReady, layers, activeId]);
-
-  useEffect(() => {
-    if (!mapReady || !mapRef.current) return;
-    mapRef.current.setLayoutProperty("fac-point", "visibility", showFacRef.current ? "visible" : "none");
-    mapRef.current.setLayoutProperty("fac-cluster", "visibility", showFacRef.current ? "visible" : "none");
-    mapRef.current.setLayoutProperty("fac-cluster-label", "visibility", showFacRef.current ? "visible" : "none");
   }, [mapReady, showFacilities]);
-
-  useEffect(() => {
-    if (!mapReady) return;
-    let active = true;
-    fetchFacilities().then((gj) => {
-      if (!active || !mapRef.current) return;
-      const src = mapRef.current.getSource("fac") as maplibregl.GeoJSONSource;
-      if (src) src.setData(gj);
-    });
-    return () => { active = false; };
-  }, [mapReady]);
 
   useEffect(() => {
     if (!mapReady) return;
     const map = mapRef.current;
     if (!map) return;
-    const popup = new maplibregl.Popup({ closeButton: false, maxWidth: "260px" });
+    const popup = new maplibregl.Popup({ closeButton: false, maxWidth: "300px" });
+    const hlSrc = map.getSource("hl") as maplibregl.GeoJSONSource;
+
+    map.on("mousemove", "rgn-fill", (e) => {
+      const f = e.features && e.features[0];
+      if (!f) return;
+      map.getCanvas().style.cursor = "pointer";
+      if (hlSrc) hlSrc.setData({ type: "FeatureCollection", features: [f] });
+      const p = f.properties || {};
+      const k = metricRef.current;
+      const m = METRICS.find((x) => x.key === k) || METRICS[0];
+      const rows = METRICS.map(
+        (x) => `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+          <span style="width:8px;height:8px;border-radius:50%;background:${x.color};display:inline-block"></span>
+          <span style="flex:1">${x.label}</span>
+          <span style="font-weight:600;font-family:monospace">${fmtDensity(p[x.key] || 0)}/km² · ${fmtHeads(p[x.key + "_tot"] || 0)}</span>
+        </div>`).join("");
+      popup.setHTML(`
+        <div style="font-family:system-ui;font-size:12px;line-height:1.5">
+          <div style="font-weight:700">${p.N2 || p.N1 || "District"}</div>
+          <div style="color:#64748B;font-size:11px">${[p.N1, p.CN].filter(Boolean).join(" · ")}</div>
+          <div style="margin-top:4px">
+            <span style="font-weight:700;font-family:monospace">${fmtDensity(p[k] || 0)}</span> ${m.unit} mean ${m.label.toLowerCase()} density
+          </div>
+          <div style="margin-top:4px;border-top:1px solid #E5E9EF;padding-top:4px">${rows}</div>
+        </div>`).setLngLat(e.lngLat).addTo(map);
+    });
+    map.on("mouseleave", "rgn-fill", () => {
+      map.getCanvas().style.cursor = "";
+      if (hlSrc) hlSrc.setData({ type: "FeatureCollection", features: [] });
+      popup.remove();
+    });
+
     map.on("mouseenter", "fac-point", (e) => {
       map.getCanvas().style.cursor = "pointer";
       const f = e.features && e.features[0];
@@ -245,6 +330,8 @@ export function HealthMap({
       if (f && f.geometry) map.easeTo({ center: (f as AnyGeoJSON).geometry.coordinates, zoom: Math.max(map.getZoom(), 7) });
     });
     return () => {
+      map.off("mousemove", "rgn-fill");
+      map.off("mouseleave", "rgn-fill");
       map.off("mouseenter", "fac-point");
       map.off("mouseleave", "fac-point");
       map.off("click", "fac-cluster");
@@ -253,56 +340,55 @@ export function HealthMap({
     };
   }, [mapReady]);
 
-  const legendColors = COLORS.map((c) => `rgb(${c[0]},${c[1]},${c[2]})`);
+  const legendMax = stops[stops.length - 1]?.v || 0;
+  const legendMid = stops[Math.floor(stops.length / 2)]?.v || 0;
 
   return (
-    <div className="relative w-full" style={{ height: 520 }}>
+    <div className="relative w-full" style={{ height }}>
       <div ref={containerRef} className="w-full h-full" />
-      {!mapReady && (
+      {!data && (
         <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#F8FAFC" }}>
           <span className="text-sm" style={{ color: atlas.textMuted }}>Loading map…</span>
         </div>
       )}
-      <div
-        className="absolute left-3 bottom-3 rounded-md px-3 py-2"
-        style={{ background: "rgba(255,255,255,0.94)", border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow, maxWidth: 230 }}
-      >
-        <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: atlas.textMuted }}>
-          Travel time · {activeLayer?.title || "—"}
-        </div>
+      {data && (
         <div
-          className="h-2 rounded"
-          style={{ background: `linear-gradient(90deg, ${legendColors.join(",")})` }}
-        />
-        <div className="flex justify-between text-[10px] mt-1 tabular-nums" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
-          <span>0</span>
-          <span>1h</span>
-          <span>4h</span>
-          <span>24h+</span>
+          className="absolute left-3 bottom-3 rounded-md px-3 py-2"
+          style={{ background: "rgba(255,255,255,0.94)", border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow, maxWidth: 230 }}
+        >
+          <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: atlas.textMuted }}>
+            {activeMetric.label} · {activeMetric.unit}
+          </div>
+          <div
+            className="h-2 rounded"
+            style={{ background: `linear-gradient(90deg, ${stops.map((s) => s.c).join(",")})` }}
+          />
+          <div className="flex justify-between text-[10px] mt-1 tabular-nums" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
+            <span>0</span>
+            <span>{fmtDensity(legendMid)}</span>
+            <span>{fmtDensity(legendMax)}</span>
+          </div>
+          <div className="text-[9px] mt-1" style={{ color: atlas.textMuted }}>per GADM district · zonal mean {data.meta.resolution}</div>
         </div>
-        <div className="text-[9px] mt-1" style={{ color: atlas.textMuted }}>0 = cell containing a facility · minutes</div>
-      </div>
-      <div
-        className="absolute right-3 top-3 rounded-md px-3 py-2"
-        style={{ background: "rgba(255,255,255,0.94)", border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow }}
-      >
-        <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: atlas.textMuted }}>
-          Facilities by type
+      )}
+      {showFacilities && (
+        <div
+          className="absolute right-3 top-3 rounded-md px-3 py-2"
+          style={{ background: "rgba(255,255,255,0.94)", border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow }}
+        >
+          <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: atlas.textMuted }}>
+            Facilities by type
+          </div>
+          <div className="space-y-1">
+            {FAC_CLASSES.map((c) => (
+              <div key={c.key} className="flex items-center gap-2 text-[11px]">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
+                <span style={{ color: atlas.textSub }}>{c.key}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="space-y-1">
-          {FAC_CLASSES.map((c) => (
-            <div key={c.key} className="flex items-center gap-2 text-[11px]">
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
-              <span style={{ color: atlas.textSub }}>{c.key}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
-
-const BREAKS = [0, 30, 60, 120, 240, 480, 720, 1440];
-const COLORS = [
-  [22, 163, 74], [132, 204, 22], [250, 204, 21], [251, 146, 60], [249, 115, 22], [239, 68, 68], [185, 28, 28], [127, 29, 29],
-];

@@ -1,30 +1,40 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { atlas, PageHeader, StatCards, Panel, FilterBar, Chip, SourceNote, PageLoader } from "../common/Atlas";
-import { fetchHealthMeta, fetchFacilities, HealthMap, FAC_CLASSES, type HealthMeta, type HealthLayer } from "./HealthMap";
+import {
+  fetchLivestock,
+  fetchFacilities,
+  HealthMap,
+  METRICS,
+  FAC_CLASSES,
+  type MetricKey,
+  type LivestockData,
+} from "./HealthMap";
 
-function fmtPct(v: number): string {
-  return `${v.toFixed(1)}%`;
+function fmtD(v: number): string {
+  return v >= 1 ? v.toLocaleString(undefined, { maximumFractionDigits: 1 }) : v.toFixed(2);
 }
 
-function fmtHrs(mins: number): string {
-  const h = mins / 60;
-  return h >= 24 ? `${(h / 24).toFixed(1)} d` : `${h.toFixed(1)} h`;
+function fmtH(v: number): string {
+  if (v >= 1e9) return `${(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+  if (v >= 1e3) return `${(v / 1e3).toFixed(1)}k`;
+  return v.toLocaleString();
 }
 
 export function HealthAccess() {
-  const [meta, setMeta] = useState<HealthMeta | null>(null);
-  const [facCount, setFacCount] = useState<number | null>(null);
+  const [data, setData] = useState<LivestockData | null>(null);
+  const [facilities, setFacilities] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeId, setActiveId] = useState<string>("gt");
+  const [metric, setMetric] = useState<MetricKey>("cattle");
   const [showFacilities, setShowFacilities] = useState(true);
 
   useEffect(() => {
     let active = true;
-    Promise.all([fetchHealthMeta(), fetchFacilities()])
-      .then(([m, gj]) => {
+    Promise.all([fetchLivestock(), fetchFacilities()])
+      .then(([lv, fc]) => {
         if (!active) return;
-        setMeta(m);
-        setFacCount(gj.features ? gj.features.length : null);
+        setData(lv);
+        setFacilities(fc);
         setLoading(false);
       })
       .catch(() => {
@@ -33,18 +43,33 @@ export function HealthAccess() {
     return () => { active = false; };
   }, []);
 
+  const facCount = facilities?.features?.length ?? null;
+  const facCountries = useMemo(() => {
+    if (!facilities) return 0;
+    return new Set(facilities.features.map((f: any) => f.properties.co)).size;
+  }, [facilities]);
+
+  const classCounts = useMemo(() => {
+    const c: Record<string, number> = {};
+    if (!facilities) return c;
+    for (const f of facilities.features) {
+      const k = f.properties.cl;
+      c[k] = (c[k] || 0) + 1;
+    }
+    return c;
+  }, [facilities]);
+
+  const africa = data?.meta?.africa;
+  const leaders = useMemo(() => {
+    if (!data) return [];
+    return [...data.meta.countries]
+      .sort((a, b) => (b[`${metric}_tot`] || 0) - (a[`${metric}_tot`] || 0))
+      .slice(0, 8);
+  }, [data, metric]);
+
   if (loading) return <PageLoader />;
 
-  const layers: HealthLayer[] = meta?.layers || [];
-  const activeLayer = layers.find((l) => l.id === activeId) || (layers[0] as HealthLayer | undefined);
-  const stats = activeLayer?.stats;
-  const facMeta = meta?.facilities;
-
-  const layerCards = layers.map((l) => ({
-    layer: l,
-    value: fmtPct(l.stats.within_60_pct),
-    hint: `${fmtPct(l.stats.within_120_pct)} within 2 h · median ${fmtHrs(l.stats.median_min)}`,
-  }));
+  const activeMetric = METRICS.find((m) => m.key === metric) || METRICS[0];
 
   return (
     <div style={{ minHeight: "100vh", background: atlas.bg }}>
@@ -53,28 +78,35 @@ export function HealthAccess() {
           title="Health Access"
           subtitle={
             <>
-              {facCount ? facCount.toLocaleString() : facMeta?.mapped.toLocaleString()} mapped health facilities and{" "}
-              <span style={{ fontWeight: 600, color: atlas.text }}>modelled 2015 travel time to care</span> across Africa.
+              {facCount ? facCount.toLocaleString() : ""} mapped health facilities and{" "}
+              <span style={{ fontWeight: 600, color: atlas.text }}>modelled 2015 cattle, goat &amp; sheep density</span>{" "}
+              summarised by district.
             </>
           }
         />
 
         <StatCards
-          className="grid-cols-2 lg:grid-cols-4"
+          className="grid-cols-2 lg:grid-cols-5"
           items={[
             {
               label: "Health facilities",
-              value: facCount ?? facMeta?.mapped ?? 0,
-              hint: `mapped · ${facMeta?.countries ?? 0} countries`,
+              value: facCount ?? 0,
+              hint: `mapped · ${facCountries} countries`,
               active: false,
             },
-            ...layerCards.map((c) => ({
-              label: `Within 1 h · ${c.layer.title}`,
-              value: c.value,
-              hint: c.hint,
-              active: c.layer.id === activeLayer?.id,
-              onClick: () => setActiveId(c.layer.id),
+            ...METRICS.map((m) => ({
+              label: `${m.label} density`,
+              value: africa ? fmtD(africa[m.key]) : "—",
+              hint: "Africa mean · heads/km²",
+              active: m.key === metric,
+              onClick: () => setMetric(m.key),
             })),
+            {
+              label: "Districts",
+              value: data?.meta?.regions ?? 0,
+              hint: "GADM ADM2 · zonal means",
+              active: false,
+            },
           ]}
         />
 
@@ -90,7 +122,7 @@ export function HealthAccess() {
                 <span className="text-[12px] font-medium truncate" style={{ color: atlas.text }}>{c.key}</span>
               </div>
               <div className="mt-1.5 text-[18px] font-bold leading-none tabular-nums" style={{ color: c.color, fontFamily: "monospace" }}>
-                {(facMeta?.classes?.[c.key] ?? 0).toLocaleString()}
+                {(classCounts[c.key] ?? 0).toLocaleString()}
               </div>
             </div>
           ))}
@@ -100,26 +132,26 @@ export function HealthAccess() {
           <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: `1px solid ${atlas.border}` }}>
             <div>
               <h3 className="text-[13px] font-semibold" style={{ color: atlas.text }}>
-                Access & Facilities
+                Livestock density by district
               </h3>
               <p className="text-[11px] mt-0.5" style={{ color: atlas.textMuted }}>
-                {activeLayer?.detail || ""}
+                Zonal statistics of 2015 cattle, goat and sheep counts per {data?.meta?.resolution || "~8 km"} cell, averaged and summed per GADM district.
               </p>
             </div>
-            {activeLayer && (
+            {africa && (
               <Chip tone="amber">
-                {activeLayer.title} · {fmtPct(activeLayer.stats.within_60_pct)} within 1 h
+                {activeMetric.label} · {africa[metric].toLocaleString(undefined, { maximumFractionDigits: 1 })} heads/km² mean
               </Chip>
             )}
           </div>
           <FilterBar>
             <div className="flex items-center gap-2">
-              {layers.map((l) => {
-                const active = l.id === activeId;
+              {METRICS.map((m) => {
+                const active = m.key === metric;
                 return (
                   <button
-                    key={l.id}
-                    onClick={() => setActiveId(l.id)}
+                    key={m.key}
+                    onClick={() => setMetric(m.key)}
                     className="text-[12px] font-medium rounded-full px-3.5 py-1.5 transition-colors"
                     style={{
                       background: active ? atlas.teal : "#FFFFFF",
@@ -127,7 +159,10 @@ export function HealthAccess() {
                       border: `1px solid ${active ? atlas.teal : atlas.borderStrong}`,
                     }}
                   >
-                    {l.title}
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full inline-block" style={{ background: m.color }} />
+                      {m.label}
+                    </span>
                   </button>
                 );
               })}
@@ -144,30 +179,60 @@ export function HealthAccess() {
               Facilities {showFacilities ? "on" : "off"}
             </button>
             <span className="text-[11px]" style={{ color: atlas.textMuted }}>
-              {stats ? `${fmtPct(stats.within_60_pct)} of modelled cells within 1 h · median ${fmtHrs(stats.median_min)}` : ""}
+              Hover a district for its {activeMetric.label.toLowerCase()} density and total heads
             </span>
           </FilterBar>
-          <HealthMap layers={layers} activeId={activeId} showFacilities={showFacilities} />
-          {facMeta && (
+          <HealthMap data={data} facilities={facilities} metric={metric} showFacilities={showFacilities} />
+          {data && (
             <div className="text-[10px] px-5 py-2" style={{ color: atlas.textMuted, borderTop: `1px solid ${atlas.grid}` }}>
-              {facMeta.mapped.toLocaleString()} facilities mapped · {facMeta.dropped.toLocaleString()} records without valid coordinates excluded ·
-              travel-time cells mark minutes to the nearest facility of each tier
+              {data.meta.regions.toLocaleString()} districts · {data.meta.countries.length} countries · {data.meta.resolution} · {data.meta.years}
             </div>
           )}
         </div>
 
+        <Panel title={`Highest ${activeMetric.label} countries`} className="mt-6">
+          <div className="overflow-x-auto">
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="border-b" style={{ borderColor: atlas.border }}>
+                  <th className="text-left px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>#</th>
+                  <th className="text-left px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Country</th>
+                  <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Total heads</th>
+                  <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Mean density</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leaders.map((c, i) => (
+                  <tr key={c.gid} className="border-b" style={{ borderColor: atlas.grid }}>
+                    <td className="px-3 py-1.5 tabular-nums" style={{ color: atlas.textMuted }}>{i + 1}</td>
+                    <td className="px-3 py-1.5 font-medium" style={{ color: atlas.text }}>{c.name}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums" style={{ color: atlas.text, fontFamily: "monospace" }}>
+                      {fmtH(c[`${metric}_tot`] || 0)}
+                    </td>
+                    <td className="px-3 py-1.5 text-right tabular-nums" style={{ color: atlas.textSub, fontFamily: "monospace" }}>
+                      {fmtD(c[metric] || 0)} /km²
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+
         <Panel title="About this map" className="mt-6">
           <div className="text-[12px] leading-relaxed" style={{ color: atlas.textSub }}>
-            Facility locations come from a 2015 census of sub-Saharan health facilities (98,745 records; 96,395 with valid
-            coordinates), typed and colour-coded by service tier. Travel-time surfaces show the modelled shortest travel time
-            (minutes) to the nearest facility of the selected tier per ~8 km cell, using motorised road, rail and water transport
-            (Weiss et al. 2020, Nature Medicine). Cells containing a facility read 0.
+            Livestock counts come from the 2015 Gridded Livestock of the World layers: cattle, goat and sheep heads per ~8 km grid
+            cell, derived from national censuses and remote-sensed land use. Zonal statistics re-aggregate those cells to the
+            boundaries you see — the GADM level-2 districts used across the atlas. Each district stores a mean density (total
+            heads ÷ district area, in heads/km²) and the summed herd size, so every country is identifiable on hover. Facility
+            locations come from a 2015 census of sub-Saharan health facilities (98,745 records; 96,395 with valid coordinates),
+            typed by service tier.
           </div>
         </Panel>
 
         <SourceNote>
-          Facility census compiled per country, validated against national registries; travel time: Weiss D.J. et al. — Global
-          maps of travel time to healthcare facilities, Nature Medicine 2020 (2015 release).
+          Livestock: FAO Gridded Livestock of the World (cattle, goat, sheep), 2015 release, zonal statistics per GADM district.
+          Facilities: sub-Saharan health-facility census 2015. Density units are heads/km²; cell values are modelled estimates.
         </SourceNote>
       </div>
     </div>
