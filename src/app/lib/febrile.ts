@@ -87,23 +87,24 @@ export function extractFebrileGenera(text: string | null | undefined): string[] 
   return found;
 }
 
-/**
- * Classifies a record by scanning species and disease fields for the six
- * target genera (using genus names and common-name aliases such as
- * "spotted fever", "Lyme" or "Q fever"). Combined entries such as
- * "Babesia, Theileria, Borrelia" return every matched genus so
- * multi-pathogen cards are captured, not missed.
- */
-export function febrileGeneraOfRecord(r: {
+export function singleFebrileGenusOfRecord(r: {
   species?: string | null;
   epidemiologicalDisease?: string | null;
-}): string[] {
-  const found = new Set<string>();
-  [r.species, r.epidemiologicalDisease].forEach((t) => {
-    if (!t) return;
-    for (const g of extractFebrileGenera(t)) found.add(g);
-  });
-  return [...found];
+}): string | null {
+  for (const t of [r.epidemiologicalDisease, r.species]) {
+    if (!t) continue;
+    let best: string | null = null;
+    let bestIndex = Infinity;
+    for (const g of FEBRILE_GENERA) {
+      const m = g.match.exec(t);
+      if (m && m.index < bestIndex) {
+        best = g.key;
+        bestIndex = m.index;
+      }
+    }
+    if (best) return best;
+  }
+  return null;
 }
 
 /**

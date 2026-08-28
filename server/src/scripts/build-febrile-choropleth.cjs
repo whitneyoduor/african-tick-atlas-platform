@@ -173,8 +173,13 @@ let indexedFeatures = 0;
 
 for (const [disease, entry] of Object.entries(coords)) {
   if (!FEBRILE_RE.test(disease)) continue;
-  const genera = GENERA.filter((g) => g.match.test(disease)).map((g) => g.key);
-  if (!genera.length) continue;
+  let primary = null;
+  for (const g of GENERA) {
+    const m = g.match.exec(disease);
+    if (m && (primary === null || m.index < primary.i)) primary = { k: g.key, i: m.index };
+  }
+  if (!primary) continue;
+  const genera = [primary.k];
   for (const p of entry.points) {
     counts.total++;
     const gid = nameToGid(p.country);

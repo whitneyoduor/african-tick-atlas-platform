@@ -8,7 +8,7 @@ import {
   FEBRILE_CATEGORIES,
   FEBRILE_GENERA,
   FEBRILE_GENERA_MAP,
-  febrileGeneraOfRecord,
+  singleFebrileGenusOfRecord,
 } from "../../lib/febrile";
 import { atlas, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader } from "../common/Atlas";
 import { ChoroplethMap, fetchChoroplethData, type ChoroplethData } from "./ChoroplethMap";
@@ -91,29 +91,21 @@ export function FebrilePathogens() {
     const matched: EpidemiologicalRecord[] = [];
     let coreCount = 0;
     let otherCount = 0;
-    let multiCount = 0;
 
     for (const r of records) {
-      const genera = febrileGeneraOfRecord(r);
-      if (genera.length === 0) continue;
+      const gk = singleFebrileGenusOfRecord(r);
+      if (!gk) continue;
       matched.push(r);
-      if (genera.length > 1) multiCount++;
-      let inCore = false;
-      let inOther = false;
-      for (const gk of genera) {
-        const genus = FEBRILE_GENERA_MAP[gk];
-        const bucket = buckets[gk];
-        bucket.records.push(r);
-        if (r.species) {
-          const k = r.species.trim();
-          if (k) bucket.species.set(k, (bucket.species.get(k) || 0) + 1);
-        }
-        if (r.country) bucket.countries.set(r.country, (bucket.countries.get(r.country) || 0) + 1);
-        if (genus.category === "core") inCore = true;
-        else inOther = true;
+      const bucket = buckets[gk];
+      const genus = FEBRILE_GENERA_MAP[gk];
+      bucket.records.push(r);
+      if (r.species) {
+        const k = r.species.trim();
+        if (k) bucket.species.set(k, (bucket.species.get(k) || 0) + 1);
       }
-      if (inCore) coreCount++;
-      if (inOther) otherCount++;
+      if (r.country) bucket.countries.set(r.country, (bucket.countries.get(r.country) || 0) + 1);
+      if (genus.category === "core") coreCount++;
+      else otherCount++;
     }
 
     const speciesSet = new Set<string>();
@@ -137,7 +129,6 @@ export function FebrilePathogens() {
       totalMatched: matched.length,
       coreCount,
       otherCount,
-      multiCount,
       speciesTotal: speciesSet.size,
       countryTotal: countrySet.size,
     };
@@ -187,11 +178,6 @@ export function FebrilePathogens() {
       { name: FEBRILE_CATEGORIES[1].label, count: other },
     ];
   }, [classified]);
-
-  const multiRecords = useMemo(
-    () => records.filter((r) => febrileGeneraOfRecord(r).length > 1).slice(0, 30),
-    [records]
-  );
 
   if (loading) return <PageLoader />;
 
@@ -266,13 +252,12 @@ export function FebrilePathogens() {
         </div>
 
         <StatCards
-          className="grid-cols-2 lg:grid-cols-6"
+          className="grid-cols-2 lg:grid-cols-5"
           items={[
             { label: "Core Records", value: classified.coreCount, hint: "Rickettsia + Borrelia + Babesia" },
             { label: "Other Records", value: classified.otherCount, hint: "Coxiella + Anaplasma + Ehrlichia" },
             { label: "Total Records", value: classified.totalMatched, hint: "All six genera" },
             { label: "Tick Vectors", value: classified.speciesTotal, hint: "Rolled up by genus" },
-            { label: "Multi-Pathogen", value: classified.multiCount, hint: "Entries in 2+ genera" },
             { label: "Countries", value: classified.countryTotal, hint: "Across Africa" },
           ]}
         />
@@ -467,69 +452,10 @@ export function FebrilePathogens() {
           ))}
         </div>
 
-        {multiRecords.length > 0 && (
-          <Panel
-            title="Multi-Pathogen Records"
-            action={
-              <span className="text-[11px] tabular-nums" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
-                {classified.multiCount.toLocaleString()} total
-              </span>
-            }
-            className="mb-6"
-          >
-            <div className="overflow-x-auto">
-              <table className="w-full text-[12px]">
-                <thead>
-                  <tr className="border-b" style={{ borderColor: atlas.border }}>
-                    <th className="text-left px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Disease entry</th>
-                    <th className="text-left px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Tick species</th>
-                    <th className="text-left px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Country</th>
-                    <th className="text-left px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Classified under</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {multiRecords.map((r, i) => {
-                    const genera = febrileGeneraOfRecord(r);
-                    return (
-                      <tr key={i} className="border-b" style={{ borderColor: atlas.grid }}>
-                        <td className="px-3 py-1.5" style={{ color: atlas.text }}>{r.epidemiologicalDisease || "—"}</td>
-                        <td className="px-3 py-1.5" style={{ color: atlas.textSub }}>{r.species || "—"}</td>
-                        <td className="px-3 py-1.5" style={{ color: atlas.textSub }}>{r.country || "—"}</td>
-                        <td className="px-3 py-1.5">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {genera.map((g) => (
-                              <span
-                                key={g}
-                                className="inline-flex items-center gap-1 text-[10px] font-medium rounded-full px-2 py-0.5"
-                                style={{
-                                  background: `${FEBRILE_GENERA_MAP[g].color}18`,
-                                  color: FEBRILE_GENERA_MAP[g].color,
-                                  border: `1px solid ${FEBRILE_GENERA_MAP[g].color}55`,
-                                }}
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full" style={{ background: FEBRILE_GENERA_MAP[g].color }} />
-                                {FEBRILE_GENERA_MAP[g].label}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            {classified.multiCount > 30 && (
-              <div className="text-[11px] mt-2" style={{ color: atlas.textMuted }}>
-                Showing 30 of {classified.multiCount.toLocaleString()} multi-pathogen records.
-              </div>
-            )}
-          </Panel>
-        )}
-
         <SourceNote>
           Epidemiological records (African Tick Atlas) classified by genus — Rickettsia, Borrelia, Babesia, Coxiella,
-          Anaplasma, Ehrlichia — for the differential diagnosis of febrile illness in malaria-endemic Africa.
+          Anaplasma, Ehrlichia — for the differential diagnosis of febrile illness in malaria-endemic Africa. Records
+          that mention several pathogens (single-tick screening results) are counted once, under the first-listed genus.
         </SourceNote>
       </div>
     </div>
