@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import { atlas } from "../common/Atlas";
 
-export type MetricKey = "cattle" | "goat" | "sheep";
+export type MetricKey = "cattle" | "goat" | "sheep" | "population";
 
 export const METRICS: { key: MetricKey; label: string; unit: string; color: string }[] = [
   { key: "cattle", label: "Cattle", unit: "heads/km²", color: "#D97706" },
   { key: "goat", label: "Goat", unit: "heads/km²", color: "#0F766E" },
   { key: "sheep", label: "Sheep", unit: "heads/km²", color: "#BE123C" },
+  { key: "population", label: "Population", unit: "people/km²", color: "#7C3AED" },
 ];
 
 export interface LivestockCountryRow {
@@ -19,6 +20,10 @@ export interface LivestockCountryRow {
   cattle_tot: number;
   goat_tot: number;
   sheep_tot: number;
+  population?: number;
+  population_tot?: number;
+  population_year?: string;
+  population_source?: string;
 }
 
 export interface LivestockMeta {
@@ -26,9 +31,11 @@ export interface LivestockMeta {
   years: string;
   resolution: string;
   source: string;
-  africa: { cattle: number; goat: number; sheep: number };
+  africa: { cattle: number; goat: number; sheep: number; population: number };
   countries: LivestockCountryRow[];
   regions: number;
+  population_year?: string;
+  population_source?: string;
 }
 
 export interface LivestockData {
@@ -50,6 +57,10 @@ export interface LivestockCountryFeature {
     cattle_tot: number;
     goat_tot: number;
     sheep_tot: number;
+    population?: number;
+    population_tot?: number;
+    population_year?: string;
+    population_source?: string;
   };
   geometry: any;
 }
@@ -353,10 +364,13 @@ export function HealthMap({
       const rows = METRICS.map((x) => {
         const tot = cty ? cty.properties[x.key + "_tot"] : p[x.key + "_tot"];
         const d = cty ? cty.properties[x.key] : p[x.key];
+        const has = tot != null && d != null;
+        const noun = x.key === "population" ? "people" : tot === 1 ? "head" : "heads";
+        const value = has ? `${fmtHeads(tot || 0)} ${noun} · ${fmtDensity(d || 0)} ${x.unit}` : "no data";
         return `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
           <span style="width:8px;height:8px;border-radius:50%;background:${x.color};display:inline-block"></span>
           <span style="flex:1">${x.label}</span>
-          <span style="font-weight:600;font-family:monospace">${fmtHeads(tot || 0)} heads · ${fmtDensity(d || 0)} ${x.unit}</span>
+          <span style="font-weight:600;font-family:monospace">${value}</span>
         </div>`;
       }).join("");
       if (cty) {
@@ -365,8 +379,10 @@ export function HealthMap({
             <div style="font-weight:700">${cty.properties.CN}</div>
             <div style="color:#64748B;font-size:11px">${p.N2 || ""}${p.N1 ? ` · ${p.N1}` : ""}</div>
             <div style="margin-top:4px">
-              <span style="font-weight:700;font-family:monospace">${fmtHeads(cty.properties[k + "_tot"] || 0)}</span> head${cty.properties[k + "_tot"] === 1 ? "" : "s"} total
-              <span style="color:#64748B">· ${fmtDensity(cty.properties[k] || 0)} ${activeMetric.unit} mean</span>
+              ${cty.properties[k + "_tot"] != null
+                ? `<span style="font-weight:700;font-family:monospace">${fmtHeads(cty.properties[k + "_tot"])}</span> ${k === "population" ? "people" : cty.properties[k + "_tot"] === 1 ? "head" : "heads"} total
+              <span style="color:#64748B">· ${fmtDensity(cty.properties[k] || 0)} ${activeMetric.unit} mean</span>`
+                : `<span style="color:#64748B">no population data for ${cty.properties.CN}</span>`}
             </div>
             <div style="margin-top:4px;border-top:1px solid #E5E9EF;padding-top:4px">${rows}</div>
           </div>`).setLngLat(e.lngLat).addTo(map);
@@ -376,7 +392,9 @@ export function HealthMap({
             <div style="font-weight:700">${p.N2 || p.N1 || "District"}</div>
             <div style="color:#64748B;font-size:11px">${p.N1 || ""}${p.CN ? ` · ${p.CN}` : ""}</div>
             <div style="margin-top:4px">
-              <span style="font-weight:700;font-family:monospace">${fmtDensity(p[k] || 0)}</span> ${activeMetric.unit} mean ${activeMetric.label.toLowerCase()} density
+              ${p[k] != null
+                ? `<span style="font-weight:700;font-family:monospace">${fmtDensity(p[k])}</span> ${activeMetric.unit} mean ${activeMetric.label.toLowerCase()} density`
+                : `<span style="color:#64748B">no population data</span>`}
             </div>
             <div style="margin-top:4px;border-top:1px solid #E5E9EF;padding-top:4px">${rows}</div>
           </div>`).setLngLat(e.lngLat).addTo(map);

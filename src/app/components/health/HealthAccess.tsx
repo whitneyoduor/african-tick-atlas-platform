@@ -95,8 +95,8 @@ export function HealthAccess() {
           subtitle={
             <>
               {facCount ? facCount.toLocaleString() : ""} mapped health facilities and{" "}
-              <span style={{ fontWeight: 600, color: atlas.text }}>modelled 2015 cattle, goat &amp; sheep density</span>{" "}
-              summarised by district.
+              <span style={{ fontWeight: 600, color: atlas.text }}>modelled cattle, goat &amp; sheep density</span>{" "}
+              and <span style={{ fontWeight: 600, color: atlas.text }}>human population</span> summarised by district.
             </>
           }
         />
@@ -113,7 +113,7 @@ export function HealthAccess() {
             ...METRICS.map((m) => ({
               label: `${m.label} density`,
               value: africa ? fmtD(africa[m.key]) : "—",
-              hint: "Africa mean · heads/km²",
+              hint: `Africa mean · ${m.unit}`,
               active: m.key === metric,
               onClick: () => setMetric(m.key),
             })),
@@ -219,10 +219,12 @@ export function HealthAccess() {
             >
               <span className="font-semibold">{focus.properties.CN}</span>
               <span className="tabular-nums" style={{ fontFamily: "monospace" }}>
-                {fmtH(focus.properties[`${metric}_tot`] || 0)} {activeMetric.label.toLowerCase()} heads total
+                {focus.properties[`${metric}_tot`] != null
+                  ? `${fmtH(focus.properties[`${metric}_tot`])} ${metric === "population" ? "people" : "heads"} total`
+                  : "no population data"}
               </span>
               <span className="tabular-nums" style={{ fontFamily: "monospace" }}>
-                {fmtD(focus.properties[metric] || 0)} /km² mean
+                {focus.properties[metric] != null ? `${fmtD(focus.properties[metric])} /km² mean` : "—"}
               </span>
               <span style={{ color: atlas.textMuted }}>{focus.properties.districts} districts</span>
             </div>
@@ -231,6 +233,7 @@ export function HealthAccess() {
           {data && (
             <div className="text-[10px] px-5 py-2" style={{ color: atlas.textMuted, borderTop: `1px solid ${atlas.grid}` }}>
               {data.meta.regions.toLocaleString()} districts · {data.meta.countries.length} countries · {data.meta.resolution} · {data.meta.years}
+              {data.meta.population_year ? ` · Population ${data.meta.population_year}` : ""}
             </div>
           )}
         </div>
@@ -242,7 +245,7 @@ export function HealthAccess() {
                 <tr className="border-b" style={{ borderColor: atlas.border }}>
                   <th className="text-left px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>#</th>
                   <th className="text-left px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Country</th>
-                  <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Total heads</th>
+                  <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Total {metric === "population" ? "people" : "heads"}</th>
                   <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Mean density</th>
                 </tr>
               </thead>
@@ -269,15 +272,20 @@ export function HealthAccess() {
             Livestock counts come from the 2015 Gridded Livestock of the World layers: cattle, goat and sheep heads per ~8 km grid
             cell, derived from national censuses and remote-sensed land use. Zonal statistics re-aggregate those cells to the
             GADM level-2 districts used across the atlas. District fills are shaded by mean density, dark country borders outline
-            each nation, and hovering anywhere in a country reports that country's total herd sizes and mean density. The country
-            picker above zooms to and highlights the selected nation. Facility locations come from a 2015 census of sub-Saharan
-            health facilities (98,745 records; 96,395 with valid coordinates), typed by service tier.
+            each nation, and hovering anywhere in a country reports that country's total herd sizes and mean density. The
+            population layer shades the same districts by people per km², using UNFPA/Common Operational Dataset admin-2
+            population estimates keyed by ADM2_PCODE and rolled up to country totals where district joins are unreliable;
+            reference years vary by country (shown in the footer). The country picker above zooms to and highlights the selected
+            nation. Facility locations come from a 2015 census of sub-Saharan health facilities (98,745 records; 96,395 with
+            valid coordinates), typed by service tier.
           </div>
         </Panel>
 
         <SourceNote>
           Livestock: FAO Gridded Livestock of the World (cattle, goat, sheep), 2015 release, zonal statistics per GADM district.
-          Facilities: sub-Saharan health-facility census 2015. Density units are heads/km²; cell values are modelled estimates.
+          Population: UNFPA/COD admin-2 population estimates (cod_population_admin2.csv), keyed by ADM2_PCODE, reference years
+          vary by country. Facilities: sub-Saharan health-facility census 2015. Density units are heads or people per km²; cell
+          values are modelled estimates.
         </SourceNote>
       </div>
     </div>
