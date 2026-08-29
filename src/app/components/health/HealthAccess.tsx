@@ -29,8 +29,7 @@ export function HealthAccess() {
   const [countries, setCountries] = useState<LivestockCountries | null>(null);
   const [facilities, setFacilities] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const [metric, setMetric] = useState<MetricKey>("cattle");
-  const [showFacilities, setShowFacilities] = useState(false);
+  const [metric, setMetric] = useState<MetricKey>("population");
   const [selectedG0, setSelectedG0] = useState<string>("");
 
   useEffect(() => {
@@ -87,6 +86,13 @@ export function HealthAccess() {
 
   const activeMetric = METRICS.find((m) => m.key === metric) || METRICS[0];
 
+  const totalCol = activeMetric.kind === "density"
+    ? `Total ${metric === "population" ? "people" : "heads"}`
+    : activeMetric.kind === "rate" ? `${activeMetric.noun} mean` : `Total ${activeMetric.noun}`;
+
+  const footprint = (v: number, kind: string, unit: string) =>
+    kind === "rate" ? `${fmtD(v)} ${unit}` : `${fmtD(v)}${kind === "count" ? "" : "/km²"}`;
+
   return (
     <div style={{ minHeight: "100vh", background: atlas.bg }}>
       <div className="max-w-7xl mx-auto px-6 py-8" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -94,33 +100,33 @@ export function HealthAccess() {
           title="Health Access"
           subtitle={
             <>
-              {facCount ? facCount.toLocaleString() : ""} mapped health facilities and{" "}
-              <span style={{ fontWeight: 600, color: atlas.text }}>modelled cattle, goat &amp; sheep density</span>{" "}
-              and <span style={{ fontWeight: 600, color: atlas.text }}>human population</span> summarised by district.
+              Every layer is summarised by GADM district: livestock and human population density, mammal richness,
+              malaria incidence, and per-district counts of mapped health facilities, tick occurrences and pathogen records.
             </>
           }
         />
 
         <StatCards
-          className="grid-cols-2 lg:grid-cols-5"
+          className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
           items={[
             {
               label: "Health facilities",
               value: facCount ?? 0,
               hint: `mapped · ${facCountries} countries`,
               active: false,
+              onClick: () => setMetric("facility"),
             },
             ...METRICS.map((m) => ({
-              label: `${m.label} density`,
-              value: africa ? fmtD(africa[m.key]) : "—",
-              hint: `Africa mean · ${m.unit}`,
+              label: `${m.label}${m.kind === "density" ? " density" : ""}`,
+              value: africa ? fmtD(africa[m.key] ?? 0) : "—",
+              hint: `Africa${m.kind === "density" ? ` mean · ${m.unit}` : ` · ${m.unit}`}`,
               active: m.key === metric,
               onClick: () => setMetric(m.key),
             })),
             {
               label: "Districts",
               value: data?.meta?.regions ?? 0,
-              hint: "GADM ADM2 · zonal means",
+              hint: "GADM ADM2 · zonal means & counts",
               active: false,
             },
           ]}
@@ -148,20 +154,22 @@ export function HealthAccess() {
           <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: `1px solid ${atlas.border}` }}>
             <div>
               <h3 className="text-[13px] font-semibold" style={{ color: atlas.text }}>
-                Livestock density by district
+                Health layers by district
               </h3>
               <p className="text-[11px] mt-0.5" style={{ color: atlas.textMuted }}>
-                Zonal statistics of 2015 cattle, goat and sheep counts per {data?.meta?.resolution || "~8 km"} cell, averaged and summed per GADM district.
+                Livestock, mammal and population layers use ~8 km / 5 km gridded estimates averaged per GADM district;
+                malaria uses admin-1 incidence joined to districts; facilities, tick occurrences and pathogen records are
+                counted per district.
               </p>
             </div>
             {africa && (
               <Chip tone="amber">
-                {activeMetric.label} · {africa[metric].toLocaleString(undefined, { maximumFractionDigits: 1 })} heads/km² mean
+                {activeMetric.label} · Africa {fmtD(africa[metric] ?? 0)} {activeMetric.unit}
               </Chip>
             )}
           </div>
           <FilterBar>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {METRICS.map((m) => {
                 const active = m.key === metric;
                 return (
@@ -183,17 +191,6 @@ export function HealthAccess() {
                 );
               })}
             </div>
-            <button
-              onClick={() => setShowFacilities((s) => !s)}
-              className="text-[12px] font-medium rounded-full px-3.5 py-1.5 transition-colors"
-              style={{
-                background: showFacilities ? "#ECF6F4" : "#FFFFFF",
-                color: showFacilities ? atlas.teal : atlas.textSub,
-                border: `1px solid ${showFacilities ? "#8FBDB7" : atlas.borderStrong}`,
-              }}
-            >
-              Facilities {showFacilities ? "on" : "off"}
-            </button>
             <label className="flex items-center gap-2 text-[12px] font-medium" style={{ color: atlas.textSub }}>
               Country
               <select
@@ -209,7 +206,7 @@ export function HealthAccess() {
               </select>
             </label>
             <span className="text-[11px]" style={{ color: atlas.textMuted }}>
-              Hover a country for its totals; pick one to zoom
+              Hover a district for its values; pick a country to zoom
             </span>
           </FilterBar>
           {focus && (
@@ -220,20 +217,22 @@ export function HealthAccess() {
               <span className="font-semibold">{focus.properties.CN}</span>
               <span className="tabular-nums" style={{ fontFamily: "monospace" }}>
                 {focus.properties[`${metric}_tot`] != null
-                  ? `${fmtH(focus.properties[`${metric}_tot`])} ${metric === "population" ? "people" : "heads"} total`
-                  : "no population data"}
+                  ? `${fmtH(focus.properties[`${metric}_tot`])} ${activeMetric.noun} total`
+                  : "no data"}
               </span>
               <span className="tabular-nums" style={{ fontFamily: "monospace" }}>
-                {focus.properties[metric] != null ? `${fmtD(focus.properties[metric])} /km² mean` : "—"}
+                {focus.properties[metric] != null ? `${footprint(focus.properties[metric], activeMetric.kind, activeMetric.unit)}${activeMetric.kind === "count" ? "" : " mean"}` : "—"}
               </span>
               <span style={{ color: atlas.textMuted }}>{focus.properties.districts} districts</span>
             </div>
           )}
-          <HealthMap data={data} countries={countries} facilities={facilities} metric={metric} showFacilities={showFacilities} focus={focus} />
+          <HealthMap data={data} countries={countries} metric={metric} focus={focus} />
           {data && (
             <div className="text-[10px] px-5 py-2" style={{ color: atlas.textMuted, borderTop: `1px solid ${atlas.grid}` }}>
               {data.meta.regions.toLocaleString()} districts · {data.meta.countries.length} countries · {data.meta.resolution} · {data.meta.years}
               {data.meta.population_year ? ` · Population ${data.meta.population_year}` : ""}
+              {data.meta.mammal_year ? ` · Mammals ${data.meta.mammal_year}` : ""}
+              {data.meta.malaria_year ? ` · Malaria ${data.meta.malaria_year}` : ""}
             </div>
           )}
         </div>
@@ -245,8 +244,10 @@ export function HealthAccess() {
                 <tr className="border-b" style={{ borderColor: atlas.border }}>
                   <th className="text-left px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>#</th>
                   <th className="text-left px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Country</th>
-                  <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Total {metric === "population" ? "people" : "heads"}</th>
-                  <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>Mean density</th>
+                  <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>{totalCol}</th>
+                  <th className="text-right px-3 py-1.5 font-medium" style={{ color: atlas.textMuted }}>
+                    {activeMetric.kind === "count" ? "Mean per district" : "Mean value"}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -255,10 +256,10 @@ export function HealthAccess() {
                     <td className="px-3 py-1.5 tabular-nums" style={{ color: atlas.textMuted }}>{i + 1}</td>
                     <td className="px-3 py-1.5 font-medium" style={{ color: atlas.text }}>{c.name}</td>
                     <td className="px-3 py-1.5 text-right tabular-nums" style={{ color: atlas.text, fontFamily: "monospace" }}>
-                      {fmtH(c[`${metric}_tot`] || 0)}
+                      {fmtH((c[`${metric}_tot`] || 0) as number)}
                     </td>
                     <td className="px-3 py-1.5 text-right tabular-nums" style={{ color: atlas.textSub, fontFamily: "monospace" }}>
-                      {fmtD(c[metric] || 0)} /km²
+                      {footprint((c[metric] || 0) as number, activeMetric.kind, activeMetric.unit)}
                     </td>
                   </tr>
                 ))}
@@ -269,23 +270,27 @@ export function HealthAccess() {
 
         <Panel title="About this map" className="mt-6">
           <div className="text-[12px] leading-relaxed" style={{ color: atlas.textSub }}>
-            Livestock counts come from the 2015 Gridded Livestock of the World layers: cattle, goat and sheep heads per ~8 km grid
-            cell, derived from national censuses and remote-sensed land use. Zonal statistics re-aggregate those cells to the
-            GADM level-2 districts used across the atlas. District fills are shaded by mean density, dark country borders outline
-            each nation, and hovering anywhere in a country reports that country's total herd sizes and mean density. The
-            population layer shades the same districts by people per km², using UNFPA/Common Operational Dataset admin-2
-            population estimates keyed by ADM2_PCODE and rolled up to country totals where district joins are unreliable;
-            reference years vary by country (shown in the footer). The country picker above zooms to and highlights the selected
-            nation. Facility locations come from a 2015 census of sub-Saharan health facilities (98,745 records; 96,395 with
-            valid coordinates), typed by service tier.
+            Every health layer is rendered as a GADM level-2 district choropleth (no point clustering). Livestock counts come
+            from the 2015 Gridded Livestock of the World layers — cattle, goat and sheep heads per ~8 km cell — averaged and
+            summed per district. The population layer shades the same districts by people per km² using UNFPA/Common
+            Operational Dataset admin-2 estimates keyed by ADM2_PCODE, rolled up to country totals where district joins are
+            unreliable; reference years vary by country. The mammal layer shows the mean wild-mammal species richness per
+            district from the IUCN/SERVIR Area of Habitat 2021 5 km mosaic, standing in for wild tick-host availability. The
+            malaria layer shows the Malaria Atlas Project admin-1 incidence rate (cases per thousand, 2024) attached to each
+            district under a matching admin-1 unit. Mapped health facilities (2015 sub-Saharan census, 96,395 with
+            coordinates), GBIF tick occurrences and tick-borne disease / pathogen records are each counted per district. The
+            country picker above zooms to and highlights the selected nation.
           </div>
         </Panel>
 
         <SourceNote>
-          Livestock: FAO Gridded Livestock of the World (cattle, goat, sheep), 2015 release, zonal statistics per GADM district.
-          Population: UNFPA/COD admin-2 population estimates (cod_population_admin2.csv), keyed by ADM2_PCODE, reference years
-          vary by country. Facilities: sub-Saharan health-facility census 2015. Density units are heads or people per km²; cell
-          values are modelled estimates.
+          Livestock: FAO Gridded Livestock of the World (cattle, goat, sheep), 2015 release, zonal statistics per GADM
+          district. Population: UNFPA/COD admin-2 population estimates (cod_population_admin2.csv), keyed by ADM2_PCODE,
+          reference years vary by country. Mammals: IUCN/SERVIR Area of Habitat mammal species richness 2021, 5 km
+          World-Mollweide mosaic, zonal means. Malaria: Malaria Atlas Project admin-1 incidence rate 2024 (cases per
+          thousand), joined by admin-1 name. Facilities: sub-Saharan health-facility census 2015. Tick occurrences: GBIF.
+          Pathogens: atlas disease/pathogen records. Density units are heads or people per km²; counts are per district.
+          Values are modelled or reported estimates.
         </SourceNote>
       </div>
     </div>

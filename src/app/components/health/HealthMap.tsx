@@ -2,13 +2,20 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import { atlas } from "../common/Atlas";
 
-export type MetricKey = "cattle" | "goat" | "sheep" | "population";
+export type MetricKey = "cattle" | "goat" | "sheep" | "population" | "mammal" | "malaria" | "facility" | "tick" | "pathogen";
 
-export const METRICS: { key: MetricKey; label: string; unit: string; color: string }[] = [
-  { key: "cattle", label: "Cattle", unit: "heads/km²", color: "#D97706" },
-  { key: "goat", label: "Goat", unit: "heads/km²", color: "#0F766E" },
-  { key: "sheep", label: "Sheep", unit: "heads/km²", color: "#BE123C" },
-  { key: "population", label: "Population", unit: "people/km²", color: "#7C3AED" },
+export type MetricKind = "density" | "rate" | "count";
+
+export const METRICS: { key: MetricKey; label: string; unit: string; color: string; kind: MetricKind; noun: string }[] = [
+  { key: "cattle", label: "Cattle", unit: "heads/km²", color: "#D97706", kind: "density", noun: "heads" },
+  { key: "goat", label: "Goat", unit: "heads/km²", color: "#0F766E", kind: "density", noun: "heads" },
+  { key: "sheep", label: "Sheep", unit: "heads/km²", color: "#BE123C", kind: "density", noun: "heads" },
+  { key: "population", label: "Population", unit: "people/km²", color: "#7C3AED", kind: "density", noun: "people" },
+  { key: "mammal", label: "Mammal richness", unit: "species", color: "#4B5563", kind: "rate", noun: "species" },
+  { key: "malaria", label: "Malaria incidence", unit: "cases/1000", color: "#B91C1C", kind: "rate", noun: "cases per 1000" },
+  { key: "facility", label: "Health facilities", unit: "facilities", color: "#0EA5E9", kind: "count", noun: "facilities" },
+  { key: "tick", label: "Tick occurrence", unit: "records", color: "#65A30D", kind: "count", noun: "records" },
+  { key: "pathogen", label: "Pathogens", unit: "records", color: "#D946EF", kind: "count", noun: "records" },
 ];
 
 export interface LivestockCountryRow {
@@ -24,6 +31,7 @@ export interface LivestockCountryRow {
   population_tot?: number;
   population_year?: string;
   population_source?: string;
+  [k: string]: any;
 }
 
 export interface LivestockMeta {
@@ -31,11 +39,12 @@ export interface LivestockMeta {
   years: string;
   resolution: string;
   source: string;
-  africa: { cattle: number; goat: number; sheep: number; population: number };
+  africa: Record<string, number>;
   countries: LivestockCountryRow[];
   regions: number;
   population_year?: string;
   population_source?: string;
+  [k: string]: any;
 }
 
 export interface LivestockData {
@@ -61,6 +70,7 @@ export interface LivestockCountryFeature {
     population_tot?: number;
     population_year?: string;
     population_source?: string;
+    [k: string]: any;
   };
   geometry: any;
 }
@@ -81,7 +91,6 @@ export const FAC_CLASSES = [
 type AnyGeoJSON = any;
 
 const RAMP = ["#EEF1F5", "#FEF3C7", "#FDE68A", "#FBBF24", "#F97316", "#DC2626", "#991B1B"];
-const CLUSTER_COLORS = ["#D1FAE5", "#5EEAD4", "#2DD4BF", "#0F766E", "#134E4A"];
 
 let livestockCache: Promise<LivestockData> | null = null;
 export function fetchLivestock(): Promise<LivestockData> {
@@ -126,19 +135,23 @@ function fmtHeads(v: number): string {
   return v.toLocaleString();
 }
 
+function fmtMetricValue(m: (typeof METRICS)[number], tot: number | null | undefined, val: number | null | undefined): string {
+  if (val == null) return "no data";
+  if (m.kind === "count") return `${fmtHeads(tot || 0)} ${m.noun}`;
+  if (m.kind === "rate") return `${fmtDensity(val)} ${m.unit} mean`;
+  const noun = tot === 1 ? "head" : m.noun;
+  return `${fmtHeads(tot || 0)} ${noun} · ${fmtDensity(val)} ${m.unit}`;
+}
+
 export function HealthMap({
   data,
   countries,
-  facilities,
   metric,
-  showFacilities,
   focus,
 }: {
   data: LivestockData | null;
   countries: LivestockCountries | null;
-  facilities: AnyGeoJSON | null;
   metric: MetricKey;
-  showFacilities: boolean;
   focus: LivestockCountryFeature | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -146,8 +159,6 @@ export function HealthMap({
   const [mapReady, setMapReady] = useState(false);
   const metricRef = useRef(metric);
   metricRef.current = metric;
-  const showFacRef = useRef(showFacilities);
-  showFacRef.current = showFacilities;
 
   const countryByCN = useMemo(() => {
     const m: Record<string, LivestockCountryFeature> = {};
@@ -161,7 +172,9 @@ export function HealthMap({
 
   const stops = useMemo(() => {
     if (!data) return [{ v: 0, c: RAMP[0] }, { v: 1, c: RAMP[RAMP.length - 1] }];
-    const values = data.features.map((f) => f.properties[metricRef.current] || 0);
+    const values = data.features
+      .map((f) => f.properties[metricRef.current])
+      .filter((v: any) => typeof v === "number");
     const breaks = breaksFor(values);
     const colors = breaks.map((_, i) => RAMP[Math.min(RAMP.length - 1, i)]);
     return breaks.map((v, i) => ({ v, c: colors[Math.min(i, colors.length - 1)] }));
@@ -226,67 +239,6 @@ export function HealthMap({
         source: "hl",
         paint: { "line-color": "#0F766E", "line-width": 2, "line-opacity": 0.95 },
       });
-      map.addSource("fac", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-        cluster: true,
-        clusterRadius: 45,
-        clusterMaxZoom: 5,
-      });
-      map.addLayer({
-        id: "fac-cluster",
-        type: "circle",
-        source: "fac",
-        filter: ["has", "point_count"],
-        paint: {
-          "circle-color": [
-            "interpolate",
-            ["linear"],
-            ["get", "point_count"],
-            2, CLUSTER_COLORS[0],
-            20, CLUSTER_COLORS[2],
-            100, CLUSTER_COLORS[3],
-            1000, CLUSTER_COLORS[4],
-          ],
-          "circle-radius": ["interpolate", ["linear"], ["get", "point_count"], 2, 9, 100, 20, 1000, 30],
-          "circle-stroke-width": 1,
-          "circle-stroke-color": "#FFFFFF",
-          "circle-opacity": 0.9,
-        },
-      });
-      map.addLayer({
-        id: "fac-cluster-label",
-        type: "symbol",
-        source: "fac",
-        filter: ["has", "point_count"],
-        layout: {
-          "text-field": ["get", "point_count_abbreviated"],
-          "text-font": ["Noto Sans Regular"],
-          "text-size": 10,
-        },
-        paint: { "text-color": "#0F172A", "text-halo-color": "#FFFFFF", "text-halo-width": 1 },
-      });
-      map.addLayer({
-        id: "fac-point",
-        type: "circle",
-        source: "fac",
-        filter: ["!", ["has", "point_count"]],
-        paint: {
-          "circle-radius": 2.4,
-          "circle-color": [
-            "match",
-            ["get", "cl"],
-            "Hospital", "#DC2626",
-            "Clinic", "#F59E0B",
-            "Health centre", "#2563EB",
-            "Post / primary", "#10B981",
-            "#9CA3AF",
-          ],
-          "circle-stroke-width": 0.5,
-          "circle-stroke-color": "#FFFFFF",
-          "circle-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 1, 0.9],
-        },
-      });
       setMapReady(true);
     });
     mapRef.current = map;
@@ -310,27 +262,11 @@ export function HealthMap({
   }, [mapReady, countries]);
 
   useEffect(() => {
-    if (!mapReady || !facilities) return;
-    const src = mapRef.current?.getSource("fac") as maplibregl.GeoJSONSource | undefined;
-    if (src) src.setData(facilities);
-  }, [mapReady, facilities]);
-
-  useEffect(() => {
     if (!mapReady || !mapRef.current) return;
     if (mapRef.current.getLayer("rgn-fill")) {
       mapRef.current.setPaintProperty("rgn-fill", "fill-color", paintExpr);
     }
   }, [mapReady, paintExpr]);
-
-  useEffect(() => {
-    if (!mapReady || !mapRef.current) return;
-    const map = mapRef.current;
-    for (const id of ["fac-point", "fac-cluster", "fac-cluster-label"]) {
-      if (map.getLayer(id)) {
-        map.setLayoutProperty(id, "visibility", showFacRef.current ? "visible" : "none");
-      }
-    }
-  }, [mapReady, showFacilities]);
 
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
@@ -353,36 +289,36 @@ export function HealthMap({
     const popup = new maplibregl.Popup({ closeButton: false, maxWidth: "300px" });
     const hlSrc = map.getSource("hl") as maplibregl.GeoJSONSource;
 
+    const metricRow = (x: (typeof METRICS)[number], cty: LivestockCountryFeature | null, p: any) => {
+      const tot = cty ? cty.properties[x.key + "_tot"] : p[x.key + "_tot"];
+      const val = cty ? cty.properties[x.key] : p[x.key];
+      const has = val != null;
+      const value = has ? fmtMetricValue(x, tot, val) : "no data";
+      return `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+        <span style="width:8px;height:8px;border-radius:50%;background:${x.color};display:inline-block"></span>
+        <span style="flex:1">${x.label}</span>
+        <span style="font-weight:600;font-family:monospace">${value}</span>
+      </div>`;
+    };
+
     map.on("mousemove", "rgn-fill", (e) => {
       const f = e.features && e.features[0];
       if (!f) return;
       map.getCanvas().style.cursor = "pointer";
       if (hlSrc) hlSrc.setData({ type: "FeatureCollection", features: [f] });
       const p = f.properties || {};
-      const k = metricRef.current;
       const cty = countryByCN[p.CN];
-      const rows = METRICS.map((x) => {
-        const tot = cty ? cty.properties[x.key + "_tot"] : p[x.key + "_tot"];
-        const d = cty ? cty.properties[x.key] : p[x.key];
-        const has = tot != null && d != null;
-        const noun = x.key === "population" ? "people" : tot === 1 ? "head" : "heads";
-        const value = has ? `${fmtHeads(tot || 0)} ${noun} · ${fmtDensity(d || 0)} ${x.unit}` : "no data";
-        return `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
-          <span style="width:8px;height:8px;border-radius:50%;background:${x.color};display:inline-block"></span>
-          <span style="flex:1">${x.label}</span>
-          <span style="font-weight:600;font-family:monospace">${value}</span>
-        </div>`;
-      }).join("");
+      const rows = METRICS.map((x) => metricRow(x, cty, p)).join("");
       if (cty) {
+        const m = activeMetric;
         popup.setHTML(`
           <div style="font-family:system-ui;font-size:12px;line-height:1.5">
             <div style="font-weight:700">${cty.properties.CN}</div>
             <div style="color:#64748B;font-size:11px">${p.N2 || ""}${p.N1 ? ` · ${p.N1}` : ""}</div>
             <div style="margin-top:4px">
-              ${cty.properties[k + "_tot"] != null
-                ? `<span style="font-weight:700;font-family:monospace">${fmtHeads(cty.properties[k + "_tot"])}</span> ${k === "population" ? "people" : cty.properties[k + "_tot"] === 1 ? "head" : "heads"} total
-              <span style="color:#64748B">· ${fmtDensity(cty.properties[k] || 0)} ${activeMetric.unit} mean</span>`
-                : `<span style="color:#64748B">no population data for ${cty.properties.CN}</span>`}
+              ${cty.properties[m.key] != null
+                ? fmtMetricValue(m, cty.properties[m.key + "_tot"], cty.properties[m.key])
+                : `<span style="color:#64748B">no data for ${cty.properties.CN}</span>`}
             </div>
             <div style="margin-top:4px;border-top:1px solid #E5E9EF;padding-top:4px">${rows}</div>
           </div>`).setLngLat(e.lngLat).addTo(map);
@@ -391,11 +327,6 @@ export function HealthMap({
           <div style="font-family:system-ui;font-size:12px;line-height:1.5">
             <div style="font-weight:700">${p.N2 || p.N1 || "District"}</div>
             <div style="color:#64748B;font-size:11px">${p.N1 || ""}${p.CN ? ` · ${p.CN}` : ""}</div>
-            <div style="margin-top:4px">
-              ${p[k] != null
-                ? `<span style="font-weight:700;font-family:monospace">${fmtDensity(p[k])}</span> ${activeMetric.unit} mean ${activeMetric.label.toLowerCase()} density`
-                : `<span style="color:#64748B">no population data</span>`}
-            </div>
             <div style="margin-top:4px;border-top:1px solid #E5E9EF;padding-top:4px">${rows}</div>
           </div>`).setLngLat(e.lngLat).addTo(map);
       }
@@ -406,48 +337,9 @@ export function HealthMap({
       popup.remove();
     });
 
-    map.on("mouseenter", "fac-point", (e) => {
-      map.getCanvas().style.cursor = "pointer";
-      const f = e.features && e.features[0];
-      if (!f) return;
-      const p = f.properties || {};
-      const clsColor = FAC_CLASSES.find((c) => c.key === p.cl)?.color || "#9CA3AF";
-      popup.setLngLat(e.lngLat).setHTML(`
-        <div style="font-family:system-ui;font-size:12px;line-height:1.5;max-width:240px">
-          <div style="font-weight:700">${p.nm || "Unnamed facility"}</div>
-          <div style="color:#64748B;font-size:11px;margin-top:1px">${[p.a1, p.co].filter(Boolean).join(" · ") || ""}</div>
-          <div style="margin-top:5px;display:flex;align-items:center;gap:6px">
-            <span style="width:9px;height:9px;border-radius:50%;display:inline-block;background:${clsColor}"></span>
-            <span style="flex:1;color:${atlas.text}">${p.ft || "Health facility"}</span>
-          </div>
-          <div style="margin-top:3px;color:#64748B;font-size:11px">Ownership: <b style="color:${atlas.text}">${p.ow || "—"}</b></div>
-        </div>`).addTo(map);
-    });
-    map.on("mouseleave", "fac-point", () => {
-      map.getCanvas().style.cursor = "";
-      popup.remove();
-    });
-    map.on("click", "fac-cluster", (e) => {
-      const f = e.features && e.features[0];
-      if (!f) return;
-      const props = f.properties || {};
-      const clusterId = props.cluster_id;
-      const src = map.getSource("fac") as maplibregl.GeoJSONSource;
-      src.getClusterExpansionZoom(clusterId).then((zoom) => {
-        map.easeTo({ center: (f as AnyGeoJSON).geometry.coordinates, zoom });
-      }).catch(() => {});
-    });
-    map.on("click", "fac-point", (e) => {
-      const f = e.features && e.features[0];
-      if (f && f.geometry) map.easeTo({ center: (f as AnyGeoJSON).geometry.coordinates, zoom: Math.max(map.getZoom(), 7) });
-    });
     return () => {
       map.off("mousemove", "rgn-fill");
       map.off("mouseleave", "rgn-fill");
-      map.off("mouseenter", "fac-point");
-      map.off("mouseleave", "fac-point");
-      map.off("click", "fac-cluster");
-      map.off("click", "fac-point");
       popup.remove();
     };
   }, [mapReady, data, activeMetric, countryByCN]);
