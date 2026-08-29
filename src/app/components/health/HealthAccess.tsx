@@ -52,21 +52,35 @@ export function HealthAccess() {
     return () => { active = false; };
   }, []);
 
-  const facCount = facilities?.features?.length ?? null;
+  const facCount = facilityType ? facilities?.features.filter((f: any) => f.properties.cl === facilityType).length ?? null : facilities?.features?.length ?? null;
   const facCountries = useMemo(() => {
     if (!facilities) return 0;
     return new Set(facilities.features.map((f: any) => f.properties.co)).size;
   }, [facilities]);
+
+  const facilityTypes = useMemo(() => {
+    if (!facilities) return [];
+    const types: Record<string, number> = {};
+    for (const f of facilities.features) {
+      const k = f.properties.cl;
+      if (k) types[k] = (types[k] || 0) + 1;
+    }
+    return Object.entries(types).sort((a, b) => b[1] - a[1]);
+  }, [facilities]);
+
+  const [facilityType, setFacilityType] = useState<string | null>(null);
 
   const classCounts = useMemo(() => {
     const c: Record<string, number> = {};
     if (!facilities) return c;
     for (const f of facilities.features) {
       const k = f.properties.cl;
-      c[k] = (c[k] || 0) + 1;
+      if (!facilityType || k === facilityType) {
+        c[k] = (c[k] || 0) + 1;
+      }
     }
     return c;
-  }, [facilities]);
+  }, [facilities, facilityType]);
 
   const africa = data?.meta?.africa;
   const leaders = useMemo(() => {
@@ -204,6 +218,14 @@ export function HealthAccess() {
                 <option value="">All countries</option>
                 {countryOptions.map((c) => (
                   <option key={c.gid} value={c.gid}>{c.name}</option>
+                ))}
+              </Select>
+            </FilterGroup>
+            <FilterGroup label="Facility type">
+              <Select value={facilityType ?? ""} onChange={(v) => setFacilityType(v as string | null)} minWidth={150}>
+                <option value="">All types</option>
+                {facilityTypes.map(([type, count]) => (
+                  <option key={type} value={type}>{type} ({count})</option>
                 ))}
               </Select>
             </FilterGroup>
