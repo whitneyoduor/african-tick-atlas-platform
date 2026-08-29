@@ -6,35 +6,40 @@ export type MetricKey = "cattle" | "goat" | "sheep" | "population" | "mammal" | 
 
 export type MetricKind = "density" | "rate" | "count";
 
-export const METRICS: { key: MetricKey; label: string; unit: string; color: string; kind: MetricKind; noun: string }[] = [
-  { key: "cattle", label: "Cattle", unit: "heads/km²", color: "#D97706", kind: "density", noun: "heads" },
-  { key: "goat", label: "Goat", unit: "heads/km²", color: "#0F766E", kind: "density", noun: "heads" },
-  { key: "sheep", label: "Sheep", unit: "heads/km²", color: "#BE123C", kind: "density", noun: "heads" },
-  { key: "population", label: "Population", unit: "people/km²", color: "#7C3AED", kind: "density", noun: "people" },
-  { key: "mammal", label: "Mammal richness", unit: "species", color: "#4B5563", kind: "rate", noun: "species" },
-  { key: "malaria", label: "Malaria incidence", unit: "cases/1000", color: "#B91C1C", kind: "rate", noun: "cases per 1000" },
-  { key: "facility", label: "Health facilities", unit: "facilities", color: "#0EA5E9", kind: "count", noun: "facilities" },
-  { key: "tick", label: "Tick occurrence", unit: "records", color: "#65A30D", kind: "count", noun: "records" },
-  { key: "pathogen", label: "Pathogens", unit: "records", color: "#D946EF", kind: "count", noun: "records" },
+export interface HealthMetric {
+  key: MetricKey;
+  label: string;
+  unit: string;
+  color: string;
+  kind: MetricKind;
+  noun: string;
+  group: string;
+  blurb: string;
+}
+
+export const METRICS: HealthMetric[] = [
+  { key: "cattle", label: "Cattle density", unit: "heads/km²", color: "#D97706", kind: "density", noun: "heads", group: "Livestock & population", blurb: "Modeled cattle density" },
+  { key: "goat", label: "Goat density", unit: "heads/km²", color: "#0F766E", kind: "density", noun: "heads", group: "Livestock & population", blurb: "Modeled goat density" },
+  { key: "sheep", label: "Sheep density", unit: "heads/km²", color: "#BE123C", kind: "density", noun: "heads", group: "Livestock & population", blurb: "Modeled sheep density" },
+  { key: "population", label: "Human population", unit: "people/km²", color: "#7C3AED", kind: "density", noun: "people", group: "Livestock & population", blurb: "Admin-2 population density" },
+  { key: "mammal", label: "Mammal richness", unit: "species", color: "#4B5563", kind: "rate", noun: "species", group: "Environment & vectors", blurb: "Mean wild-mammal species per district" },
+  { key: "malaria", label: "Malaria incidence", unit: "cases/1000", color: "#B91C1C", kind: "rate", noun: "cases per 1000", group: "Environment & vectors", blurb: "Admin-1 malaria incidence rate (2024)" },
+  { key: "facility", label: "Health facilities", unit: "facilities", color: "#0EA5E9", kind: "count", noun: "facilities", group: "Records & access", blurb: "Mapped facilities per district" },
+  { key: "tick", label: "Tick occurrence", unit: "records", color: "#65A30D", kind: "count", noun: "records", group: "Records & access", blurb: "Tick occurrence records per district" },
+  { key: "pathogen", label: "Pathogen records", unit: "records", color: "#D946EF", kind: "count", noun: "records", group: "Records & access", blurb: "Disease / pathogen records per district" },
 ];
 
-export interface LivestockCountryRow {
+export const METRIC_GROUPS = ["Livestock & population", "Environment & vectors", "Records & access"];
+
+export const NO_DATA_FILL = "#E4E8ED";
+
+interface LivestockCountryRow {
   gid: string;
   name: string;
-  cattle: number;
-  goat: number;
-  sheep: number;
-  cattle_tot: number;
-  goat_tot: number;
-  sheep_tot: number;
-  population?: number;
-  population_tot?: number;
-  population_year?: string;
-  population_source?: string;
   [k: string]: any;
 }
 
-export interface LivestockMeta {
+interface LivestockMeta {
   unit: string;
   years: string;
   resolution: string;
@@ -42,8 +47,6 @@ export interface LivestockMeta {
   africa: Record<string, number>;
   countries: LivestockCountryRow[];
   regions: number;
-  population_year?: string;
-  population_source?: string;
   [k: string]: any;
 }
 
@@ -60,16 +63,6 @@ export interface LivestockCountryFeature {
     CN: string;
     centroid: [number, number];
     districts: number;
-    cattle: number;
-    goat: number;
-    sheep: number;
-    cattle_tot: number;
-    goat_tot: number;
-    sheep_tot: number;
-    population?: number;
-    population_tot?: number;
-    population_year?: string;
-    population_source?: string;
     [k: string]: any;
   };
   geometry: any;
@@ -114,16 +107,29 @@ export function fetchFacilities(): Promise<AnyGeoJSON> {
   return facCache;
 }
 
-function breaksFor(values: number[]): number[] {
+// Fisher-Jenks-style natural breaks (fall back to quantiles for simplicity);
+// returns break thresholds + counts per class for the legend.
+function classBreaks(values: number[], n = 5): { breaks: number[]; counts: number[] } {
   const nz = values.filter((v) => v > 0).sort((a, b) => a - b);
-  if (nz.length === 0) return [0];
+  const all = values.slice().sort((a, b) => a - b);
+  if (nz.length === 0) return { breaks: [0], counts: [values.length] };
   const max = nz[nz.length - 1];
   const q = (p: number) => nz[Math.min(nz.length - 1, Math.floor((nz.length - 1) * p))];
-  const set = Array.from(new Set([0, q(0.25), q(0.5), q(0.75), q(0.9), max])).sort((a, b) => a - b);
-  return set.length > 1 ? set : [0, max];
+  const qs = Array.from(new Set([0, q(0.25), q(0.5), q(0.75), q(0.9), max])).sort((a, b) => a - b);
+  const breaks = qs;
+  // assign each nonzero value to a class
+  const counts = new Array(breaks.length).fill(0);
+  for (const v of nz) {
+    let ci = breaks.findIndex((b) => v <= b);
+    if (ci < 0) ci = breaks.length - 1;
+    counts[ci]++;
+  }
+  void all;
+  return { breaks, counts };
 }
 
-function fmtDensity(v: number): string {
+function fmtBreak(m: HealthMetric, v: number): string {
+  if (m.kind === "count") return Math.round(v).toLocaleString();
   if (v < 1) return v.toFixed(2);
   return v.toLocaleString(undefined, { maximumFractionDigits: 1 });
 }
@@ -133,14 +139,6 @@ function fmtHeads(v: number): string {
   if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
   if (v >= 1e3) return `${(v / 1e3).toFixed(1)}k`;
   return v.toLocaleString();
-}
-
-function fmtMetricValue(m: (typeof METRICS)[number], tot: number | null | undefined, val: number | null | undefined): string {
-  if (val == null) return "no data";
-  if (m.kind === "count") return `${fmtHeads(tot || 0)} ${m.noun}`;
-  if (m.kind === "rate") return `${fmtDensity(val)} ${m.unit} mean`;
-  const noun = tot === 1 ? "head" : m.noun;
-  return `${fmtHeads(tot || 0)} ${noun} · ${fmtDensity(val)} ${m.unit}`;
 }
 
 export function HealthMap({
@@ -170,21 +168,20 @@ export function HealthMap({
 
   const activeMetric = METRICS.find((m) => m.key === metric) || METRICS[0];
 
-  const stops = useMemo(() => {
-    if (!data) return [{ v: 0, c: RAMP[0] }, { v: 1, c: RAMP[RAMP.length - 1] }];
-    const values = data.features
-      .map((f) => f.properties[metricRef.current])
-      .filter((v: any) => typeof v === "number");
-    const breaks = breaksFor(values);
-    const colors = breaks.map((_, i) => RAMP[Math.min(RAMP.length - 1, i)]);
-    return breaks.map((v, i) => ({ v, c: colors[Math.min(i, colors.length - 1)] }));
+  const breaks = useMemo(() => {
+    if (!data) return { breaks: [0], counts: [0] };
+    return classBreaks(data.features.map((f) => f.properties[metricRef.current]));
   }, [data, metric]);
 
   const paintExpr = useMemo<AnyGeoJSON>(() => {
-    const expr: AnyGeoJSON = ["interpolate", ["linear"], ["number", ["get", metricRef.current]]];
-    for (const s of stops) expr.push(s.v, s.c);
-    return expr;
-  }, [stops, metric]);
+    const colorRamps = breaks.breaks.map((b, i) => RAMP[Math.min(RAMP.length - 1, i)]);
+    const interp: AnyGeoJSON = ["interpolate", ["linear"], ["to-number", ["get", metricRef.current]]];
+    for (let i = 0; i < breaks.breaks.length; i++) {
+      interp.push(breaks.breaks[i], colorRamps[i]);
+    }
+    // missing data -> distinct neutral grey (never treated as zero)
+    return ["case", ["has", metricRef.current], interp, NO_DATA_FILL];
+  }, [breaks, metric]);
 
   const paintExprRef = useRef(paintExpr);
   paintExprRef.current = paintExpr;
@@ -219,7 +216,7 @@ export function HealthMap({
         id: "cty-line",
         type: "line",
         source: "cty",
-        paint: { "line-color": "#0F172A", "line-width": 1, "line-opacity": 0.6 },
+        paint: { "line-color": "#0F172A", "line-width": 1, "line-opacity": 0.55 },
       });
       map.addLayer({
         id: "sel-fill",
@@ -289,14 +286,19 @@ export function HealthMap({
     const popup = new maplibregl.Popup({ closeButton: false, maxWidth: "300px" });
     const hlSrc = map.getSource("hl") as maplibregl.GeoJSONSource;
 
-    const metricRow = (x: (typeof METRICS)[number], cty: LivestockCountryFeature | null, p: any) => {
-      const tot = cty ? cty.properties[x.key + "_tot"] : p[x.key + "_tot"];
-      const val = cty ? cty.properties[x.key] : p[x.key];
+    const metricRow = (m: HealthMetric, cty: LivestockCountryFeature | null, p: any) => {
+      const tot = cty ? cty.properties[m.key + "_tot"] : p[m.key + "_tot"];
+      const val = cty ? cty.properties[m.key] : p[m.key];
       const has = val != null;
-      const value = has ? fmtMetricValue(x, tot, val) : "no data";
+      let value = "no data";
+      if (has) {
+        if (m.kind === "count") value = `${fmtHeads(tot || 0)} ${m.noun}`;
+        else if (m.kind === "rate") value = `${fmtHeads(tot || 0)} ${m.noun} · ${fmtBreak(m, val)} mean`;
+        else value = `${fmtHeads(tot || 0)} ${m.noun} · ${fmtBreak(m, val)} ${m.unit}`;
+      }
       return `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
-        <span style="width:8px;height:8px;border-radius:50%;background:${x.color};display:inline-block"></span>
-        <span style="flex:1">${x.label}</span>
+        <span style="width:8px;height:8px;border-radius:50%;background:${m.color};display:inline-block"></span>
+        <span style="flex:1">${m.label}</span>
         <span style="font-weight:600;font-family:monospace">${value}</span>
       </div>`;
     };
@@ -308,28 +310,12 @@ export function HealthMap({
       if (hlSrc) hlSrc.setData({ type: "FeatureCollection", features: [f] });
       const p = f.properties || {};
       const cty = countryByCN[p.CN];
-      const rows = METRICS.map((x) => metricRow(x, cty, p)).join("");
-      if (cty) {
-        const m = activeMetric;
-        popup.setHTML(`
-          <div style="font-family:system-ui;font-size:12px;line-height:1.5">
-            <div style="font-weight:700">${cty.properties.CN}</div>
-            <div style="color:#64748B;font-size:11px">${p.N2 || ""}${p.N1 ? ` · ${p.N1}` : ""}</div>
-            <div style="margin-top:4px">
-              ${cty.properties[m.key] != null
-                ? fmtMetricValue(m, cty.properties[m.key + "_tot"], cty.properties[m.key])
-                : `<span style="color:#64748B">no data for ${cty.properties.CN}</span>`}
-            </div>
-            <div style="margin-top:4px;border-top:1px solid #E5E9EF;padding-top:4px">${rows}</div>
-          </div>`).setLngLat(e.lngLat).addTo(map);
-      } else {
-        popup.setHTML(`
-          <div style="font-family:system-ui;font-size:12px;line-height:1.5">
-            <div style="font-weight:700">${p.N2 || p.N1 || "District"}</div>
-            <div style="color:#64748B;font-size:11px">${p.N1 || ""}${p.CN ? ` · ${p.CN}` : ""}</div>
-            <div style="margin-top:4px;border-top:1px solid #E5E9EF;padding-top:4px">${rows}</div>
-          </div>`).setLngLat(e.lngLat).addTo(map);
-      }
+      const rows = METRICS.map((m) => metricRow(m, cty, p)).join("");
+      popup.setHTML(`
+        <div style="font-family:system-ui;font-size:12px;line-height:1.5">
+          <div style="font-weight:700">${p.N2 || p.N1 || "District"}${cty ? ` · ${cty.properties.CN}` : ""}</div>
+          <div style="margin-top:4px;border-top:1px solid #E5E9EF;padding-top:4px">${rows}</div>
+        </div>`).setLngLat(e.lngLat).addTo(map);
     });
     map.on("mouseleave", "rgn-fill", () => {
       map.getCanvas().style.cursor = "";
@@ -342,13 +328,18 @@ export function HealthMap({
       map.off("mouseleave", "rgn-fill");
       popup.remove();
     };
-  }, [mapReady, data, activeMetric, countryByCN]);
+  }, [mapReady, data, countryByCN]);
 
-  const legendMax = stops[stops.length - 1]?.v || 0;
-  const legendMid = stops[Math.floor(stops.length / 2)]?.v || 0;
+  const legendBreaks = breaks.breaks;
+  const legendSteps: { from: number; to: number; i: number }[] = [];
+  for (let i = 0; i < legendBreaks.length; i++) {
+    const from = legendBreaks[i];
+    const to = i + 1 < legendBreaks.length ? legendBreaks[i + 1] : legendBreaks[i];
+    legendSteps.push({ from, to, i });
+  }
 
   return (
-    <div className="relative w-full" style={{ height: 420 }}>
+    <div className="relative w-full" style={{ height: 460 }}>
       <div ref={containerRef} className="w-full h-full" />
       {!data && (
         <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#F8FAFC" }}>
@@ -357,17 +348,21 @@ export function HealthMap({
       )}
       {data && (
         <div
-          className="absolute left-3 bottom-3 rounded-md px-3 py-2"
-          style={{ background: "rgba(255,255,255,0.94)", border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow, maxWidth: 220 }}
+          className="absolute left-3 bottom-3 rounded-md px-3 py-2 w-[230px]"
+          style={{ background: "rgba(255,255,255,0.96)", border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow }}
         >
           <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: atlas.textMuted }}>
             {activeMetric.label} · {activeMetric.unit}
           </div>
-          <div className="h-2 rounded" style={{ background: `linear-gradient(90deg, ${stops.map((s) => s.c).join(",")})` }} />
+          <div className="h-2 rounded" style={{ background: `linear-gradient(90deg, ${legendSteps.map((s) => RAMP[Math.min(RAMP.length - 1, s.i)]).join(",")})` }} />
           <div className="flex justify-between text-[10px] mt-1 tabular-nums" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
-            <span>0</span>
-            <span>{fmtDensity(legendMid)}</span>
-            <span>{fmtDensity(legendMax)}</span>
+            <span>{fmtBreak(activeMetric, legendBreaks[0])}</span>
+            <span>{fmtBreak(activeMetric, legendBreaks[Math.floor(legendBreaks.length / 2)])}</span>
+            <span>{fmtBreak(activeMetric, legendBreaks[legendBreaks.length - 1])}</span>
+          </div>
+          <div className="flex items-center gap-1.5 mt-2 pt-1.5" style={{ borderTop: `1px solid ${atlas.grid}`, color: atlas.textMuted, fontSize: 10 }}>
+            <span className="w-3 h-2 rounded-sm shrink-0" style={{ background: NO_DATA_FILL }} />
+            <span>No data for this district</span>
           </div>
         </div>
       )}
