@@ -137,11 +137,11 @@ def main():
         g0 = feat["properties"]["G0"]
         by_country.setdefault(g0, []).append((idx, geom_bbox(feat["geometry"]), feat["geometry"]))
 
-    counts = {"facility": [0] * n, "tick": [0] * n, "pathogen": [0] * n}
+    counts = {"facility": [0] * n, "facility_Hospital": [0] * n, "facility_Clinic": [0] * n, "facility_Health_centre": [0] * n, "facility_Post_primary": [0] * n, "facility_Other": [0] * n, "tick": [0] * n, "pathogen": [0] * n}
     mapped = {"facility": 0, "tick": 0, "pathogen": 0}
 
     point_sources = {
-        "facility": (FACILITIES, lambda f: (f["properties"]["co"], f["geometry"]["coordinates"])),
+        "facility": (FACILITIES, lambda f: (f["properties"]["co"], f["geometry"]["coordinates"], f["properties"].get("cl"))),
         "tick": (TICK, lambda f: (f["properties"]["country"], f["geometry"]["coordinates"])),
     }
     for key, (path, acc) in point_sources.items():
@@ -149,7 +149,7 @@ def main():
         fc = json.load(io.open(path, encoding="utf-8"))
         for f in fc["features"]:
             try:
-                cname, coords = acc(f)
+                cname, coords, cls = acc(f)
             except Exception:
                 continue
             if not coords or len(coords) != 2:
@@ -166,6 +166,17 @@ def main():
                 if point_in_geometry((lng, lat), geom):
                     counts[key][idx] += 1
                     mapped[key] += 1
+                    if key == "facility" and cls:
+                        if cls == "Hospital":
+                            counts["facility_Hospital"][idx] += 1
+                        elif cls == "Clinic":
+                            counts["facility_Clinic"][idx] += 1
+                        elif cls == "Health centre":
+                            counts["facility_Health_centre"][idx] += 1
+                        elif cls == "Post / primary":
+                            counts["facility_Post_primary"][idx] += 1
+                        else:
+                            counts["facility_Other"][idx] += 1
                     break
 
     print("  aggregating pathogen from disease-coordinates.json ...")
@@ -193,10 +204,18 @@ def main():
                 features[idx]["properties"][key] = c
                 features[idx]["properties"][key + "_tot"] = c
 
+    # add facility class breakdown per district
+    for idx in range(n):
+        for cls_key in ["facility_Hospital", "facility_Clinic", "facility_Health_centre", "facility_Post_primary", "facility_Other"]:
+            c = features[idx]["properties"].get(cls_key, 0)
+            if c > 0:
+                features[idx]["properties"][cls_key] = c
+                features[idx]["properties"][cls_key + "_tot"] = c
+
     country_agg = {}
     for idx, feat in enumerate(features):
         g0 = feat["properties"]["G0"]
-        ca = country_agg.setdefault(g0, {"facility": 0, "tick": 0, "pathogen": 0})
+        ca = country_agg.setdefault(g0, {"facility": 0, "facility_Hospital": 0, "facility_Clinic": 0, "facility_Health_centre": 0, "facility_Post_primary": 0, "facility_Other": 0, "tick": 0, "pathogen": 0})
         for key in counts:
             ca[key] += counts[key][idx]
 
@@ -211,6 +230,11 @@ def main():
             if tot > 0:
                 p[key] = tot
                 p[key + "_tot"] = tot
+        for cls_key in ["facility_Hospital", "facility_Clinic", "facility_Health_centre", "facility_Post_primary", "facility_Other"]:
+            tot = ca.get(cls_key, 0)
+            if tot > 0:
+                p[cls_key] = tot
+                p[cls_key + "_tot"] = tot
 
     meta = choro.setdefault("meta", {})
     africa = meta.setdefault("africa", {})
@@ -219,7 +243,7 @@ def main():
         "tick": "GBIF tick occurrences, counted per GADM district",
         "pathogen": "tick-borne disease / pathogen records (disease-coordinates.json), counted per GADM district",
     }
-    for key in counts:
+    for key in ["facility", "tick", "pathogen"]:
         africa[key] = sum(ca[key] for ca in country_agg.values())
         meta[key + "_source"] = sources[key]
 
@@ -228,7 +252,7 @@ def main():
     with open(CHORO, "w", encoding="utf-8") as fh:
         json.dump(choro, fh, ensure_ascii=False, separators=(",", ":"))
 
-    print("  africa counts:", {k: africa[k] for k in counts})
+    print("  africa counts:", {k: africa[k] for k in ["facility", "tick", "pathogen"]})
     print("  mapped points:", mapped)
     print("  wrote:", COUNTRIES, CHORO)
 
