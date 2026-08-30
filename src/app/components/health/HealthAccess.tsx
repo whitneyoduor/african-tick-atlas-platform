@@ -35,6 +35,7 @@ export function HealthAccess() {
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState<MetricKey>("population");
   const [selectedG0, setSelectedG0] = useState<string>("");
+  const [facilityType, setFacilityType] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -67,8 +68,6 @@ export function HealthAccess() {
     }
     return Object.entries(types).sort((a, b) => b[1] - a[1]);
   }, [facilities]);
-
-  const [facilityType, setFacilityType] = useState<string | null>(null);
 
   const classCounts = useMemo(() => {
     const c: Record<string, number> = {};
