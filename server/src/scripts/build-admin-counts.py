@@ -23,6 +23,7 @@ Run:  python server/src/scripts/build-admin-counts.py
 import io
 import json
 import os
+import re
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 PUB = os.path.join(ROOT, "public", "health")
@@ -87,6 +88,13 @@ def country_to_g0(name):
     return CN_COUNTRIES.get(canon)
 
 
+def species_slug(name):
+    """Stable property-key slug for a tick species, e.g. 'Rhipicephalus annulatus' -> 'rhipicephalus_annulatus'."""
+    s = (name or "").strip().lower()
+    s = re.sub(r"[^a-z0-9]+", "_", s).strip("_")
+    return s or "unknown"
+
+
 def in_ring(pt, ring):
     x, y = pt
     inside = False
@@ -139,6 +147,8 @@ def main():
 
     counts = {"facility": [0] * n, "facility_Hospital": [0] * n, "facility_Clinic": [0] * n, "facility_Health_centre": [0] * n, "facility_Post_primary": [0] * n, "facility_Other": [0] * n, "tick": [0] * n, "tickvec": [0] * n, "pathogen": [0] * n}
     mapped = {"facility": 0, "tick": 0, "tickvec": 0, "pathogen": 0}
+    sp_counts = {}
+    sp_names = {}
 
     # Tick species that are known vectors of tick-borne pathogens (from the
     # disease / pathogen records). Used to flag "ticks with pathogens".
@@ -177,6 +187,13 @@ def main():
                 if point_in_geometry((lng, lat), geom):
                     counts[key][idx] += 1
                     mapped[key] += 1
+                    if key == "tick" and extra:
+                        slug = species_slug(str(extra))
+                        sp_names.setdefault(slug, str(extra))
+                        arr = sp_counts.get(slug)
+                        if arr is None:
+                            arr = sp_counts[slug] = [0] * n
+                        arr[idx] += 1
                     if is_vec:
                         counts["tickvec"][idx] += 1
                         mapped["tickvec"] += 1
@@ -210,6 +227,15 @@ def main():
                     mapped["pathogen"] += 1
                     break
 
+    # Per-species tick counts for the species dropdown. Only species with at least
+    # five mapped records are kept so the map colours by a species' actual presence.
+    species_meta = []
+    for slug, tot in sorted(((s, sum(a)) for s, a in sp_counts.items()), key=lambda x: -x[1]):
+        if tot < 5:
+            break
+        counts["tick_" + slug] = sp_counts[slug]
+        species_meta.append({"slug": slug, "name": sp_names.get(slug, slug), "count": tot})
+
     for key, arr in counts.items():
         for idx in range(n):
             c = arr[idx]
@@ -228,9 +254,9 @@ def main():
     country_agg = {}
     for idx, feat in enumerate(features):
         g0 = feat["properties"]["G0"]
-        ca = country_agg.setdefault(g0, {"facility": 0, "facility_Hospital": 0, "facility_Clinic": 0, "facility_Health_centre": 0, "facility_Post_primary": 0, "facility_Other": 0, "tick": 0, "tickvec": 0, "pathogen": 0})
+        ca = country_agg.setdefault(g0, {})
         for key in counts:
-            ca[key] += counts[key][idx]
+            ca[key] = ca.get(key, 0) + counts[key][idx]
 
     countries = json.load(io.open(COUNTRIES, encoding="utf-8"))
     for feat in countries["features"]:
@@ -260,6 +286,8 @@ def main():
     for key in ["facility", "tick", "tickvec", "pathogen"]:
         africa[key] = sum(ca[key] for ca in country_agg.values())
         meta[key + "_source"] = sources[key]
+    if species_meta:
+        meta["tick_species"] = species_meta
 
     with open(COUNTRIES, "w", encoding="utf-8") as fh:
         json.dump(countries, fh, ensure_ascii=False, separators=(",", ":"))
@@ -268,6 +296,7 @@ def main():
 
     print("  africa counts:", {k: africa[k] for k in ["facility", "tick", "tickvec", "pathogen"]})
     print("  mapped points:", mapped)
+    print("  tick species with map data:", len(species_meta), "| top:", [(s["name"], s["count"]) for s in species_meta[:5]])
     print("  wrote:", COUNTRIES, CHORO)
 
 

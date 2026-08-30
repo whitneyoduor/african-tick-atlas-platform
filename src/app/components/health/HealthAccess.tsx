@@ -41,6 +41,11 @@ function facKey(t: string): string {
   return "facility_" + t.replace(/[ /\-]/g, "_");
 }
 
+/** Decorate a slug into a display species name (rhipicephalus_annulatus -> Rhipicephalus annulatus). */
+function speciesName(slug: string): string {
+  return slug.split("_").map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w)).join(" ");
+}
+
 function useCoverage(data: LivestockData | null, countries: LivestockCountries | null) {
   return useMemo(() => {
     if (!data || !countries) return null;
@@ -74,6 +79,7 @@ export function HealthAccess() {
   const [metric, setMetric] = useState<MetricKey>("population");
   const [selectedG0, setSelectedG0] = useState<string>("");
   const [facilityType, setFacilityType] = useState<string | null>(null);
+  const [tickSpecies, setTickSpecies] = useState<string | null>(null);
   const [hovered, setHovered] = useState<any | null>(null);
   const [pinned, setPinned] = useState<any | null>(null);
 
@@ -149,6 +155,23 @@ export function HealthAccess() {
 
   const onHover = useCallback((f: any | null) => { setHovered(f); }, []);
   const onSelect = useCallback((f: any | null) => { setPinned((p) => (p === f ? null : f)); }, []);
+
+  const speciesOptions = useMemo(() => {
+    const list = data?.meta?.tick_species;
+    if (!Array.isArray(list)) return [];
+    return list.map((s) => ({ value: s.slug, label: s.name, sub: `${s.count} records` }));
+  }, [data]);
+
+  const facet = useMemo(() => {
+    if (facilityType && metric === "facility") {
+      return { metric: "facility" as MetricKey, propKey: facKey(facilityType), label: `${facilityType} facilities` };
+    }
+    if (tickSpecies && metric === "tick") {
+      const found = speciesOptions.find((s) => s.value === tickSpecies);
+      return { metric: "tick" as MetricKey, propKey: "tick_" + tickSpecies, label: found ? found.label : speciesName(tickSpecies) };
+    }
+    return null;
+  }, [facilityType, tickSpecies, metric, speciesOptions]);
 
   const zeroCountries = useMemo(() => {
     if (!coverage) return [];
@@ -295,11 +318,12 @@ export function HealthAccess() {
             <div className="flex items-center justify-between px-5 py-3 gap-3" style={{ borderBottom: `1px solid ${atlas.border}` }}>
               <div className="min-w-0">
                 <h3 className="text-[13px] font-semibold" style={{ color: atlas.text }}>
-                  {facilityType && metric === "facility" ? `${facilityType} facilities` : activeMetric.label} by admin unit
+                  {facet ? facet.label : activeMetric.label} by admin unit
                 </h3>
                 <p className="text-[11px] mt-0.5" style={{ color: atlas.textMuted }}>
-                  {activeMetric.blurb}
-                  {facilityType && metric === "facility" ? " — coloured by this facility class only." : " — GADM-level choropleth."}
+                  {facet
+                    ? `Coloured by this ${facet.metric === "facility" ? "facility class" : "tick species"} only, per admin unit.`
+                    : `${activeMetric.blurb} — GADM-level choropleth.`}
                 </p>
               </div>
               {activeAfrica != null && (
@@ -314,7 +338,24 @@ export function HealthAccess() {
                   value={metric}
                   onChange={(v) => setMetric(v as MetricKey)}
                   minWidth={230}
-                  options={METRICS.map((m) => ({ value: m.key, label: m.label, dot: m.color, sub: "" }))}
+                  options={METRICS
+                    .filter((m) => m.key !== "tickvec" && m.key !== "pathogen")
+                    .map((m) => ({ value: m.key, label: m.label, dot: m.color, sub: "" }))}
+                />
+              </FilterGroup>
+              <FilterGroup label="Tick species">
+                <MenuSelect
+                  value={tickSpecies ?? ""}
+                  onChange={(v) => {
+                    const s = (v as string) || null;
+                    setTickSpecies(s);
+                    if (s) setMetric("tick");
+                  }}
+                  searchable
+                  includeClear
+                  placeholder="All species"
+                  minWidth={230}
+                  options={speciesOptions}
                 />
               </FilterGroup>
               <FilterGroup label="Country">
@@ -354,7 +395,7 @@ export function HealthAccess() {
               >
                 <span className="font-semibold">{focus.properties.CN}</span>
                 <span className="tabular-nums" style={{ fontFamily: "monospace" }}>
-                  {fmtVal(activeMetric, focus.properties[metric], focus.properties[`${metric}_tot`])}
+                  {fmtVal(activeMetric, focus.properties[facet?.propKey ?? metric], focus.properties[`${facet?.propKey ?? metric}_tot`])}
                 </span>
                 <span style={{ color: atlas.textMuted }}>{focus.properties.districts} admin units</span>
                 <button
@@ -371,7 +412,7 @@ export function HealthAccess() {
               countries={countries}
               metric={metric}
               focus={focus}
-              facFacet={facilityType}
+              facet={facet}
               onHover={onHover}
               onSelect={onSelect}
             />

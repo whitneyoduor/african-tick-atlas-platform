@@ -142,16 +142,17 @@ function fmtHeads(v: number): string {
   return v.toLocaleString();
 }
 
-/** Resolve the property key the map should colour by.
- *  When a facility class facet is active (e.g. "Hospital"), the colour metric
- *  is that class's per-district count (facility_Hospital) rather than the total. */
-function layerKey(metric: MetricKey, facFacet: string | null): string {
-  return facFacet && metric === "facility" ? "facility_" + facFacet.replace(/[ /\-]/g, "_") : metric;
+/** A sub-user of a choropleth layer: colour by a facet property instead of the
+ *  layer's default metric (e.g. a facility class "facility_Hospital", or a tick
+ *  species "tick_rhipicephalus_annulatus"). Only applies while its metric is active. */
+export interface LayerFacet {
+  metric: MetricKey;
+  propKey: string;
+  label: string;
 }
 
-/** Human label for a facility-class facet, inverting the property-key encoding. */
-export function facFacetLabel(key: string): string {
-  return key.replace(/_/g, " ").trim();
+function layerKey(metric: MetricKey, facet: LayerFacet | null): string {
+  return facet && facet.metric === metric ? facet.propKey : metric;
 }
 
 export function HealthMap({
@@ -159,7 +160,7 @@ export function HealthMap({
   countries,
   metric,
   focus,
-  facFacet,
+  facet,
   onHover,
   onSelect,
 }: {
@@ -167,7 +168,7 @@ export function HealthMap({
   countries: LivestockCountries | null;
   metric: MetricKey;
   focus: LivestockCountryFeature | null;
-  facFacet?: string | null;
+  facet?: LayerFacet | null;
   onHover?: (feature: any | null) => void;
   onSelect?: (feature: any | null) => void;
 }) {
@@ -176,8 +177,8 @@ export function HealthMap({
   const [mapReady, setMapReady] = useState(false);
   const metricRef = useRef(metric);
   metricRef.current = metric;
-  const facFacetRef = useRef(facFacet ?? null);
-  facFacetRef.current = facFacet ?? null;
+  const facetRef = useRef<LayerFacet | null>(facet ?? null);
+  facetRef.current = facet ?? null;
 
   const countryByCN = useMemo(() => {
     const m: Record<string, LivestockCountryFeature> = {};
@@ -191,12 +192,12 @@ export function HealthMap({
 
   const breaks = useMemo(() => {
     if (!data) return { breaks: [0], counts: [0] };
-    const lk = layerKey(metricRef.current, facFacetRef.current);
+    const lk = layerKey(metricRef.current, facetRef.current);
     return classBreaks(data.features.map((f) => f.properties[lk]));
-  }, [data, metric, facFacet]);
+  }, [data, metric, facet]);
 
   const paintExpr = useMemo<AnyGeoJSON>(() => {
-    const lk = layerKey(metricRef.current, facFacetRef.current);
+    const lk = layerKey(metricRef.current, facetRef.current);
     const colorRamps = breaks.breaks.map((b, i) => RAMP[Math.min(RAMP.length - 1, i)]);
     const interp: AnyGeoJSON = ["interpolate", ["linear"], ["to-number", ["get", lk]]];
     for (let i = 0; i < breaks.breaks.length; i++) {
@@ -204,7 +205,7 @@ export function HealthMap({
     }
     // missing data -> distinct neutral grey (never treated as zero)
     return ["case", ["has", lk], interp, NO_DATA_FILL];
-  }, [breaks, metric, facFacet]);
+  }, [breaks, metric, facet]);
 
   const paintExprRef = useRef(paintExpr);
   paintExprRef.current = paintExpr;
@@ -334,10 +335,8 @@ export function HealthMap({
       const p = f.properties || {};
       const cty = countryByCN[p.CN];
       onHover?.(f);
-      const fk = facFacetRef.current && activeMetric.key === "facility"
-        ? "facility_" + facFacetRef.current.replace(/[ /\-]/g, "_")
-        : activeMetric.key;
-      const rows = METRICS.map((m) => metricRow(m, cty, p, m.key === "facility" ? fk : m.key)).join("");
+      const facetKey = facetRef.current && facetRef.current.metric === activeMetric.key ? facetRef.current.propKey : activeMetric.key;
+      const rows = METRICS.map((m) => metricRow(m, cty, p, m.key === activeMetric.key ? facetKey : m.key)).join("");
       popup.setHTML(`
         <div style="font-family:system-ui;font-size:12px;line-height:1.5">
           <div style="font-weight:700">${p.N2 || p.N1 || "District"}${cty ? ` · ${cty.properties.CN}` : ""}</div>
@@ -389,7 +388,7 @@ export function HealthMap({
           style={{ background: "rgba(255,255,255,0.96)", border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow }}
         >
           <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: atlas.textMuted }}>
-            {facFacet && metric === "facility" ? `${facFacet} facilities · count` : `${activeMetric.label} · ${activeMetric.unit}`}
+            {facet && facet.metric === metric ? `${facet.label} · count` : `${activeMetric.label} · ${activeMetric.unit}`}
           </div>
           <div className="h-2 rounded" style={{ background: `linear-gradient(90deg, ${legendSteps.map((s) => RAMP[Math.min(RAMP.length - 1, s.i)]).join(",")})` }} />
           <div className="flex justify-between text-[10px] mt-1 tabular-nums" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
