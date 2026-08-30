@@ -52,7 +52,7 @@ CN_COUNTRIES = {
     "algeria": "DZA", "egypt": "EGY", "eritrea": "ERI", "ethiopia": "ETH",
     "gabon": "GAB", "ghana": "GHA", "guinea": "GIN", "gambia": "GMB",
     "guinea bissau": "GNB", "equatorial guinea": "GNQ", "kenya": "KEN",
-    "liberia": "LBR", "morocco": "MAR", "madagascar": "MDG", "mali": "MLI",
+    "liberia": "LBR", "libya": "LBY", "morocco": "MAR", "madagascar": "MDG", "mali": "MLI",
     "mozambique": "MOZ", "mauritania": "MRT", "malawi": "MWI", "namibia": "NAM",
     "niger": "NER", "nigeria": "NGA", "rwanda": "RWA", "sudan": "SDN",
     "senegal": "SEN", "sierra leone": "SLE", "somalia": "SOM",

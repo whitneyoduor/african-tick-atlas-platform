@@ -124,6 +124,49 @@ ALIASES = {
     "valle du bandama": "vallee du bandama",
     "nairobi city": "nairobi",
     "nairobi county": "nairobi",
+    # Angola
+    "kuando kubango": "cuando cubango",
+    "kwanza norte": "cuanza norte",
+    "kwanza sul": "cuanza sul",
+    # Cameroon (French)
+    "north west": "nord ouest",
+    "south west": "sud ouest",
+    # Ghana
+    "northern east": "north east",
+    # Gambia
+    "central river": "maccarthy island",
+    "kanifing municipal council": "banjul",
+    "west coast": "western",
+    # Sierra Leone
+    "north western": "northern",
+    "western area": "western",
+    # Somalia
+    "juba dhexe": "jubbada dhexe",
+    "juba hoose": "jubbada hoose",
+    "shabelle dhexe": "shabeellaha dhexe",
+    "shabelle hoose": "shabeellaha hoose",
+    # South Sudan
+    "jonglei": "jungoli",
+    "western bahr el ghazal": "west bahr al ghazal",
+    # Sudan
+    "gedaref": "al qadarif",
+    # Togo
+    "centrale": "centre",
+    # Eritrea (Dahlak archipelago -> Northern Red Sea)
+    "archipelagos": "semenawi keyih bahri",
+    # Rwanda (Kinyarwanda admin-1 names)
+    "kigali city": "umujyi wa kigali",
+    "northern province": "amajyaruguru",
+    "southern province": "amajyepfo",
+    "eastern province": "iburasirazuba",
+    "western province": "iburengerazuba",
+    # Benin
+    "atacora": "atakora",
+    "couffo": "kouffo",
+    # Mali
+    "tombouctou": "timbuktu",
+    # Mozambique
+    "cidade de maputo": "maputo city",
 }
 
 W0, W1, S0, N1_ = -26.0, 55.0, -36.0, 38.0
