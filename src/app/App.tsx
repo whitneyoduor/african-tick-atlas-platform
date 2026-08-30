@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, useParams } from "react-router";
+import { BrowserRouter, Routes, Route, useParams, Navigate } from "react-router";
 import { Layout } from "./components/layout/Layout";
 
 const MapPage = lazy(() => import("./components/map/MapPage").then(m => ({ default: m.MapPage })));
@@ -40,7 +40,8 @@ export default function App() {
           <Route path="diseases/:name" element={<Suspense fallback={<Loading />}><DiseasePage /></Suspense>} />
           <Route path="febrile" element={<Suspense fallback={<Loading />}><FebrilePathogens /></Suspense>} />
           <Route path="environmental" element={<Suspense fallback={<Loading />}><ReproductivePotential /></Suspense>} />
-          <Route path="health" element={<Suspense fallback={<Loading />}><HealthAccess /></Suspense>} />
+          <Route path="health" element={<Navigate to="/climsynoptick" replace />} />
+          <Route path="climsynoptick" element={<Suspense fallback={<Loading />}><HealthAccess /></Suspense>} />
           <Route path="downloads" element={<Suspense fallback={<Loading />}><Downloads /></Suspense>} />
           <Route path="about" element={<Suspense fallback={<Loading />}><About /></Suspense>} />
           <Route path="*" element={<NotFound />} />

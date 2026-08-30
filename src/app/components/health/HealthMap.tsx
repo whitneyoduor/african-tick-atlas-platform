@@ -142,22 +142,42 @@ function fmtHeads(v: number): string {
   return v.toLocaleString();
 }
 
+/** Resolve the property key the map should colour by.
+ *  When a facility class facet is active (e.g. "Hospital"), the colour metric
+ *  is that class's per-district count (facility_Hospital) rather than the total. */
+function layerKey(metric: MetricKey, facFacet: string | null): string {
+  return facFacet && metric === "facility" ? "facility_" + facFacet.replace(/[ /\-]/g, "_") : metric;
+}
+
+/** Human label for a facility-class facet, inverting the property-key encoding. */
+export function facFacetLabel(key: string): string {
+  return key.replace(/_/g, " ").trim();
+}
+
 export function HealthMap({
   data,
   countries,
   metric,
   focus,
+  facFacet,
+  onHover,
+  onSelect,
 }: {
   data: LivestockData | null;
   countries: LivestockCountries | null;
   metric: MetricKey;
   focus: LivestockCountryFeature | null;
+  facFacet?: string | null;
+  onHover?: (feature: any | null) => void;
+  onSelect?: (feature: any | null) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const metricRef = useRef(metric);
   metricRef.current = metric;
+  const facFacetRef = useRef(facFacet ?? null);
+  facFacetRef.current = facFacet ?? null;
 
   const countryByCN = useMemo(() => {
     const m: Record<string, LivestockCountryFeature> = {};
@@ -171,18 +191,20 @@ export function HealthMap({
 
   const breaks = useMemo(() => {
     if (!data) return { breaks: [0], counts: [0] };
-    return classBreaks(data.features.map((f) => f.properties[metricRef.current]));
-  }, [data, metric]);
+    const lk = layerKey(metricRef.current, facFacetRef.current);
+    return classBreaks(data.features.map((f) => f.properties[lk]));
+  }, [data, metric, facFacet]);
 
   const paintExpr = useMemo<AnyGeoJSON>(() => {
+    const lk = layerKey(metricRef.current, facFacetRef.current);
     const colorRamps = breaks.breaks.map((b, i) => RAMP[Math.min(RAMP.length - 1, i)]);
-    const interp: AnyGeoJSON = ["interpolate", ["linear"], ["to-number", ["get", metricRef.current]]];
+    const interp: AnyGeoJSON = ["interpolate", ["linear"], ["to-number", ["get", lk]]];
     for (let i = 0; i < breaks.breaks.length; i++) {
       interp.push(breaks.breaks[i], colorRamps[i]);
     }
     // missing data -> distinct neutral grey (never treated as zero)
-    return ["case", ["has", metricRef.current], interp, NO_DATA_FILL];
-  }, [breaks, metric]);
+    return ["case", ["has", lk], interp, NO_DATA_FILL];
+  }, [breaks, metric, facFacet]);
 
   const paintExprRef = useRef(paintExpr);
   paintExprRef.current = paintExpr;
@@ -287,9 +309,9 @@ export function HealthMap({
     const popup = new maplibregl.Popup({ closeButton: false, maxWidth: "300px" });
     const hlSrc = map.getSource("hl") as maplibregl.GeoJSONSource;
 
-    const metricRow = (m: HealthMetric, cty: LivestockCountryFeature | null, p: any) => {
-      const tot = cty ? cty.properties[m.key + "_tot"] : p[m.key + "_tot"];
-      const val = cty ? cty.properties[m.key] : p[m.key];
+    const metricRow = (m: HealthMetric, cty: LivestockCountryFeature | null, p: any, fk: string) => {
+      const tot = (cty ? cty.properties[fk + "_tot"] : p[fk + "_tot"]) ?? (cty ? cty.properties[fk] : p[fk]) ?? 0;
+      const val = cty ? cty.properties[fk] : p[fk];
       const has = val != null;
       let value = "no data";
       if (has) {
@@ -304,32 +326,46 @@ export function HealthMap({
       </div>`;
     };
 
-    map.on("mousemove", "rgn-fill", (e) => {
+    const onMove = (e: any) => {
       const f = e.features && e.features[0];
       if (!f) return;
       map.getCanvas().style.cursor = "pointer";
       if (hlSrc) hlSrc.setData({ type: "FeatureCollection", features: [f] });
       const p = f.properties || {};
       const cty = countryByCN[p.CN];
-      const rows = METRICS.map((m) => metricRow(m, cty, p)).join("");
+      onHover?.(f);
+      const fk = facFacetRef.current && activeMetric.key === "facility"
+        ? "facility_" + facFacetRef.current.replace(/[ /\-]/g, "_")
+        : activeMetric.key;
+      const rows = METRICS.map((m) => metricRow(m, cty, p, m.key === "facility" ? fk : m.key)).join("");
       popup.setHTML(`
         <div style="font-family:system-ui;font-size:12px;line-height:1.5">
           <div style="font-weight:700">${p.N2 || p.N1 || "District"}${cty ? ` · ${cty.properties.CN}` : ""}</div>
           <div style="margin-top:4px;border-top:1px solid #E5E9EF;padding-top:4px">${rows}</div>
         </div>`).setLngLat(e.lngLat).addTo(map);
-    });
-    map.on("mouseleave", "rgn-fill", () => {
+    };
+    const onLeave = () => {
       map.getCanvas().style.cursor = "";
       if (hlSrc) hlSrc.setData({ type: "FeatureCollection", features: [] });
       popup.remove();
-    });
+      onHover?.(null);
+    };
+    const onPick = (e: any) => {
+      const f = e.features && e.features[0];
+      if (f) onSelect?.(f);
+    };
+
+    map.on("mousemove", "rgn-fill", onMove);
+    map.on("mouseleave", "rgn-fill", onLeave);
+    map.on("click", "rgn-fill", onPick);
 
     return () => {
-      map.off("mousemove", "rgn-fill");
-      map.off("mouseleave", "rgn-fill");
+      map.off("mousemove", "rgn-fill", onMove);
+      map.off("mouseleave", "rgn-fill", onLeave);
+      map.off("click", "rgn-fill", onPick);
       popup.remove();
     };
-  }, [mapReady, data, countryByCN]);
+  }, [mapReady, data, countryByCN, onHover, onSelect, metric]);
 
   const legendBreaks = breaks.breaks;
   const legendSteps: { from: number; to: number; i: number }[] = [];
@@ -353,7 +389,7 @@ export function HealthMap({
           style={{ background: "rgba(255,255,255,0.96)", border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow }}
         >
           <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: atlas.textMuted }}>
-            {activeMetric.label} · {activeMetric.unit}
+            {facFacet && metric === "facility" ? `${facFacet} facilities · count` : `${activeMetric.label} · ${activeMetric.unit}`}
           </div>
           <div className="h-2 rounded" style={{ background: `linear-gradient(90deg, ${legendSteps.map((s) => RAMP[Math.min(RAMP.length - 1, s.i)]).join(",")})` }} />
           <div className="flex justify-between text-[10px] mt-1 tabular-nums" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
