@@ -137,19 +137,29 @@ def main():
         g0 = feat["properties"]["G0"]
         by_country.setdefault(g0, []).append((idx, geom_bbox(feat["geometry"]), feat["geometry"]))
 
-    counts = {"facility": [0] * n, "facility_Hospital": [0] * n, "facility_Clinic": [0] * n, "facility_Health_centre": [0] * n, "facility_Post_primary": [0] * n, "facility_Other": [0] * n, "tick": [0] * n, "pathogen": [0] * n}
-    mapped = {"facility": 0, "tick": 0, "pathogen": 0}
+    counts = {"facility": [0] * n, "facility_Hospital": [0] * n, "facility_Clinic": [0] * n, "facility_Health_centre": [0] * n, "facility_Post_primary": [0] * n, "facility_Other": [0] * n, "tick": [0] * n, "tickvec": [0] * n, "pathogen": [0] * n}
+    mapped = {"facility": 0, "tick": 0, "tickvec": 0, "pathogen": 0}
+
+    # Tick species that are known vectors of tick-borne pathogens (from the
+    # disease / pathogen records). Used to flag "ticks with pathogens".
+    dm = json.load(io.open(DISEASE, encoding="utf-8"))
+    vector_species = set()
+    for obj in dm.values():
+        for pt in obj.get("points", []):
+            s = pt.get("species")
+            if s:
+                vector_species.add(norm(str(s)))
 
     point_sources = {
         "facility": (FACILITIES, lambda f: (f["properties"]["co"], f["geometry"]["coordinates"], f["properties"].get("cl"))),
-        "tick": (TICK, lambda f: (f["properties"]["country"], f["geometry"]["coordinates"])),
+        "tick": (TICK, lambda f: (f["properties"]["country"], f["geometry"]["coordinates"], f["properties"].get("species"))),
     }
     for key, (path, acc) in point_sources.items():
         print("  aggregating", key, "from", os.path.basename(path), "...")
         fc = json.load(io.open(path, encoding="utf-8"))
         for f in fc["features"]:
             try:
-                cname, coords, cls = acc(f)
+                cname, coords, extra = acc(f)
             except Exception:
                 continue
             if not coords or len(coords) != 2:
@@ -160,27 +170,30 @@ def main():
             g0 = country_to_g0(cname)
             if not g0:
                 continue
+            is_vec = key == "tick" and extra and norm(str(extra)) in vector_species
             for (idx, b, geom) in by_country.get(g0, []):
                 if not (b[0] <= lng <= b[2] and b[1] <= lat <= b[3]):
                     continue
                 if point_in_geometry((lng, lat), geom):
                     counts[key][idx] += 1
                     mapped[key] += 1
-                    if key == "facility" and cls:
-                        if cls == "Hospital":
+                    if is_vec:
+                        counts["tickvec"][idx] += 1
+                        mapped["tickvec"] += 1
+                    if key == "facility" and extra:
+                        if extra == "Hospital":
                             counts["facility_Hospital"][idx] += 1
-                        elif cls == "Clinic":
+                        elif extra == "Clinic":
                             counts["facility_Clinic"][idx] += 1
-                        elif cls == "Health centre":
+                        elif extra == "Health centre":
                             counts["facility_Health_centre"][idx] += 1
-                        elif cls == "Post / primary":
+                        elif extra == "Post / primary":
                             counts["facility_Post_primary"][idx] += 1
                         else:
                             counts["facility_Other"][idx] += 1
                     break
 
     print("  aggregating pathogen from disease-coordinates.json ...")
-    dm = json.load(io.open(DISEASE, encoding="utf-8"))
     for di, (dname, obj) in enumerate(dm.items(), 1):
         for pt in obj.get("points", []):
             lat, lng = pt.get("lat"), pt.get("lng")
@@ -215,7 +228,7 @@ def main():
     country_agg = {}
     for idx, feat in enumerate(features):
         g0 = feat["properties"]["G0"]
-        ca = country_agg.setdefault(g0, {"facility": 0, "facility_Hospital": 0, "facility_Clinic": 0, "facility_Health_centre": 0, "facility_Post_primary": 0, "facility_Other": 0, "tick": 0, "pathogen": 0})
+        ca = country_agg.setdefault(g0, {"facility": 0, "facility_Hospital": 0, "facility_Clinic": 0, "facility_Health_centre": 0, "facility_Post_primary": 0, "facility_Other": 0, "tick": 0, "tickvec": 0, "pathogen": 0})
         for key in counts:
             ca[key] += counts[key][idx]
 
@@ -241,9 +254,10 @@ def main():
     sources = {
         "facility": "sub-Saharan health-facility census 2015, counted per GADM district",
         "tick": "GBIF tick occurrences, counted per GADM district",
+        "tickvec": "GBIF tick occurrences of species known to carry tick-borne pathogens, counted per GADM district",
         "pathogen": "tick-borne disease / pathogen records (disease-coordinates.json), counted per GADM district",
     }
-    for key in ["facility", "tick", "pathogen"]:
+    for key in ["facility", "tick", "tickvec", "pathogen"]:
         africa[key] = sum(ca[key] for ca in country_agg.values())
         meta[key + "_source"] = sources[key]
 
@@ -252,7 +266,7 @@ def main():
     with open(CHORO, "w", encoding="utf-8") as fh:
         json.dump(choro, fh, ensure_ascii=False, separators=(",", ":"))
 
-    print("  africa counts:", {k: africa[k] for k in ["facility", "tick", "pathogen"]})
+    print("  africa counts:", {k: africa[k] for k in ["facility", "tick", "tickvec", "pathogen"]})
     print("  mapped points:", mapped)
     print("  wrote:", COUNTRIES, CHORO)
 

@@ -203,12 +203,8 @@ export function HealthAccess() {
           <FilterBar>
             <FilterGroup label="Layer">
               <Select value={metric} onChange={(v) => setMetric(v as MetricKey)} minWidth={230}>
-                {METRIC_GROUPS.map((g) => (
-                  <optgroup key={g} label={g}>
-                    {METRICS.filter((m) => m.group === g).map((m) => (
-                      <option key={m.key} value={m.key}>{m.label}</option>
-                    ))}
-                  </optgroup>
+                {METRICS.map((m) => (
+                  <option key={m.key} value={m.key}>{m.label}</option>
                 ))}
               </Select>
             </FilterGroup>
@@ -311,8 +307,9 @@ export function HealthAccess() {
             IUCN/SERVIR Area of Habitat 2021 5 km mosaic, standing in for wild tick-host availability. Malaria incidence is
             the Malaria Atlas Project admin-1 rate (cases per thousand, 2024) attached to every district under a matching
             admin-1 unit. Mapped health facilities (2015 sub-Saharan census), GBIF tick occurrences and tick-borne disease /
-            pathogen records are counted per district. Only districts with data are coloured; missing districts are shown in
-            grey so gaps are never mistaken for zeros.
+            pathogen records are counted per district. "Ticks with pathogens" counts tick occurrences whose species is a known
+            carrier of a tick-borne pathogen (from the disease / pathogen records). Only districts with data are coloured;
+            missing districts are shown in grey so gaps are never mistaken for zeros.
           </div>
         </Panel>
 
@@ -321,8 +318,9 @@ export function HealthAccess() {
           Population: UNFPA/COD admin-2 estimates (cod_population_admin2.csv), keyed by ADM2_PCODE; reference years vary by
           country. Mammals: IUCN/SERVIR Area of Habitat mammal species richness 2021, 5 km World-Mollweide mosaic.
           Malaria: Malaria Atlas Project admin-1 incidence rate 2024 (cases per thousand), joined by admin-1 name.
-          Facilities: sub-Saharan health-facility census 2015. Tick occurrences: GBIF. Pathogens: atlas disease/pathogen
-          records. Density in heads or people per km²; rates and counts as reported per district.
+          Facilities: sub-Saharan health-facility census 2015. Tick occurrences: GBIF. "Ticks with pathogens" = tick
+          occurrences of species known to carry tick-borne pathogens. Pathogens: atlas disease/pathogen records. Density in
+          heads or people per km²; rates and counts as reported per district.
         </SourceNote>
       </div>
     </div>
