@@ -10,7 +10,7 @@ import {
   FEBRILE_GENERA_MAP,
   singleFebrileGenusOfRecord,
 } from "../../lib/febrile";
-import { atlas, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader } from "../common/Atlas";
+import { atlas, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader, FigureExportButton } from "../common/Atlas";
 import { ChoroplethMap, fetchChoroplethData, type ChoroplethData } from "./ChoroplethMap";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -61,6 +61,7 @@ export function FebrilePathogens() {
   const [choropleth, setChoropleth] = useState<ChoroplethData | null>(null);
   const [loading, setLoading] = useState(true);
   const [mapFilter, setMapFilter] = useState("all");
+  const [captureMap, setCaptureMap] = useState<() => HTMLCanvasElement | undefined>(() => () => undefined as unknown as HTMLCanvasElement);
 
   useEffect(() => {
     let active = true;
@@ -143,10 +144,10 @@ export function FebrilePathogens() {
   }, [mapFilter]);
 
   const mapLabel = useMemo(() => {
-    if (mapFilter === "all") return "Human febrile pathogens";
+    if (mapFilter === "all") return "All human febrile illnesses pathogens";
     if (mapFilter === "core") return FEBRILE_CATEGORIES.find((c) => c.key === "core")!.label;
     if (mapFilter === "other") return FEBRILE_CATEGORIES.find((c) => c.key === "other")!.label;
-    return FEBRILE_GENERA_MAP[mapFilter]?.label || "Febrile pathogens";
+    return FEBRILE_GENERA_MAP[mapFilter]?.label || "Human febrile illnesses pathogens";
   }, [mapFilter]);
 
   const choroTotals = useMemo(() => {
@@ -185,10 +186,10 @@ export function FebrilePathogens() {
     <div style={{ minHeight: "100vh", background: atlas.bg }}>
       <div className="max-w-7xl mx-auto px-6 py-8" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
         <PageHeader
-          title="Human Febrile Pathogens"
+          title="Human Febrile illnesses Pathogens"
           subtitle={
             <>
-              Tick-borne pathogens that present like malaria —{" "}
+              Human febrile illnesses pathogens that present like malaria —{" "}
               <span style={{ fontWeight: 600, color: atlas.text }}>mapped by genus</span>.
             </>
           }
@@ -386,14 +387,17 @@ export function FebrilePathogens() {
                 Occurrence points per admin region, coloured by pathogen layer
               </p>
             </div>
-            <span className="text-[11px] tabular-nums" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
-              {choroTotals.points.toLocaleString()} points in mapped regions
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] tabular-nums" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
+                {choroTotals.points.toLocaleString()} points in mapped regions
+              </span>
+              <FigureExportButton captureFn={captureMap as unknown as () => HTMLCanvasElement} filename="febrile-pathogens-choropleth.png" />
+            </div>
           </div>
           <FilterBar>
             <FilterGroup label="Layer">
               <Select value={mapFilter} onChange={setMapFilter} minWidth={230}>
-                <option value="all">All human febrile genera</option>
+                <option value="all">All human febrile illnesses pathogens genera</option>
                 <option value="core">{FEBRILE_CATEGORIES[0].label}</option>
                 <option value="other">{FEBRILE_CATEGORIES[1].label}</option>
                 {FEBRILE_GENERA.map((g) => (
@@ -407,7 +411,7 @@ export function FebrilePathogens() {
               </Chip>
             )}
           </FilterBar>
-          <ChoroplethMap data={choropleth} keys={mapKeys} />
+          <ChoroplethMap data={choropleth} keys={mapKeys} registerCapture={setCaptureMap} />
           {choropleth && choroTotals.unmapped > 0 && (
             <div className="text-[10px] px-5 py-2" style={{ color: atlas.textMuted, borderTop: `1px solid ${atlas.grid}` }}>
               {choroTotals.unmapped.toLocaleString()} of {choroTotals.total.toLocaleString()} febrile occurrence points fall outside mapped admin regions

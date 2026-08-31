@@ -37,12 +37,20 @@ function countByGroup(entry: DiseaseCoordinateEntry): {
 export function EvidenceMap({
   entry,
   diseaseName,
+  registerCapture,
 }: {
   entry: DiseaseCoordinateEntry | undefined;
   diseaseName: string;
+  registerCapture?: (fn: () => HTMLCanvasElement) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+
+  useEffect(() => {
+    if (!registerCapture) return;
+    registerCapture(() => mapRef.current ? mapRef.current.getCanvas() : undefined as unknown as HTMLCanvasElement);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registerCapture]);
 
   const byGenus = useMemo(
     () => !!entry && entry.points.some((p) => (p as PointWithGenus).genus),

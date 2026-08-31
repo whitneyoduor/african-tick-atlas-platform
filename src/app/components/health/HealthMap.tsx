@@ -163,6 +163,7 @@ export function HealthMap({
   facet,
   onHover,
   onSelect,
+  registerCapture,
 }: {
   data: LivestockData | null;
   countries: LivestockCountries | null;
@@ -171,6 +172,7 @@ export function HealthMap({
   facet?: LayerFacet | null;
   onHover?: (feature: any | null) => void;
   onSelect?: (feature: any | null) => void;
+  registerCapture?: (fn: () => HTMLCanvasElement) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -179,6 +181,12 @@ export function HealthMap({
   metricRef.current = metric;
   const facetRef = useRef<LayerFacet | null>(facet ?? null);
   facetRef.current = facet ?? null;
+
+  useEffect(() => {
+    if (!registerCapture) return;
+    registerCapture(() => (mapRef.current ? mapRef.current.getCanvas() : undefined as unknown as HTMLCanvasElement));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registerCapture]);
 
   const countryByCN = useMemo(() => {
     const m: Record<string, LivestockCountryFeature> = {};

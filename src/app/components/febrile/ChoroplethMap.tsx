@@ -3,6 +3,8 @@ import maplibregl from "maplibre-gl";
 import { atlas } from "../common/Atlas";
 import { FEBRILE_GENERA } from "../../lib/febrile";
 
+type CaptureFn = () => HTMLCanvasElement;
+
 export interface ChoroplethMeta {
   total: number;
   mapped: number;
@@ -51,16 +53,24 @@ export function ChoroplethMap({
   data,
   keys,
   height = 420,
+  registerCapture,
 }: {
   data: ChoroplethData | null;
   keys: string[];
   height?: number;
+  registerCapture?: (fn: CaptureFn) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const keysRef = useRef(keys);
   keysRef.current = keys;
+
+  useEffect(() => {
+    if (!registerCapture) return;
+    registerCapture(() => (mapRef.current ? mapRef.current.getCanvas() : undefined as unknown as HTMLCanvasElement));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registerCapture]);
 
   const isTotal = keys.length >= FEBRILE_GENERA.length;
   const selectedKeys = isTotal ? [] : keys;

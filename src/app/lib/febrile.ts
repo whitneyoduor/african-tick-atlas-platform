@@ -19,13 +19,13 @@ export interface FebrileGenus {
 export const FEBRILE_CATEGORIES: FebrileCategory[] = [
   {
     key: "core",
-    label: "Core malaria-differential",
-    description: "Mimic malaria — a documented cause of diagnostic confusion.",
+    label: "Febrile illnesses Pathogens",
+    description: "Human febrile illnesses pathogens — mimic malaria, a documented cause of diagnostic confusion.",
   },
   {
     key: "other",
-    label: "Other neglected febrile",
-    description: "Undifferentiated fevers that routine tests overlook.",
+    label: "Other neglected febrile illnesses pathogens",
+    description: "Neglected febrile illnesses pathogens that routine tests overlook.",
   },
 ];
 

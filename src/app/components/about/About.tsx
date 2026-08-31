@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchEpidemiologicalMeta, fetchOccurrenceMeta, type EpidemiologicalMeta, type OccurrenceMeta } from "../../lib/api";
+import { fetchEpidemiologicalMeta, fetchOccurrenceMeta, isAfricanCountry, type EpidemiologicalMeta, type OccurrenceMeta } from "../../lib/api";
 
 const REPO_URL = "https://github.com/whitneyoduor/african-tick-atlas-platform";
 
@@ -26,7 +26,7 @@ export function About() {
     { label: "Tick species", value: occMeta?.species.length ?? null },
     { label: "Diseases & pathogens", value: epiMeta?.diseases.length ?? null },
     { label: "Host species", value: epiMeta?.hosts.length ?? null },
-    { label: "Countries", value: occMeta?.countries.length ?? null },
+    { label: "African countries", value: occMeta?.countries.filter((c) => isAfricanCountry(c.name)).length ?? null },
   ];
 
   return (

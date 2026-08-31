@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useMemo, useRef, useState, useCallback, useEffect } from "react";
+import { downloadFigurePng } from "../../lib/exportFigure";
 
 export const atlas = {
   bg: "#F4F6F8",
@@ -312,6 +313,44 @@ export function Chip({ children, tone = "teal" }: { children: ReactNode; tone?: 
     <span className="text-[12px] font-medium rounded-full px-3 py-1" style={{ background: colors.bg, color: colors.fg, border: `1px solid ${colors.border}` }}>
       {children}
     </span>
+  );
+}
+
+export function FigureExportButton({ targetRef, captureFn, filename = "figure.png" }: { targetRef?: React.RefObject<HTMLElement>; captureFn?: () => HTMLCanvasElement; filename?: string }) {
+  const [exporting, setExporting] = useState(false);
+  const handleClick = async () => {
+    setExporting(true);
+    try {
+      if (captureFn) {
+        await downloadFigurePng(captureFn, filename);
+      } else if (targetRef?.current) {
+        await downloadFigurePng(targetRef.current, filename);
+      }
+    } finally {
+      setExporting(false);
+    }
+  };
+  return (
+    <button
+      onClick={handleClick}
+      disabled={exporting}
+      className="text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-all flex items-center gap-1.5"
+      style={{
+        borderColor: atlas.border,
+        background: atlas.card,
+        color: atlas.textSub,
+        cursor: exporting ? "not-allowed" : "pointer",
+        opacity: exporting ? 0.6 : 1,
+      }}
+      title="Download figure as PNG"
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" y1="15" x2="12" y2="3" />
+      </svg>
+      <span>{exporting ? "Saving..." : "PNG"}</span>
+    </button>
   );
 }
 

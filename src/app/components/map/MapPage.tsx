@@ -8,6 +8,7 @@ import {
   type EpidemiologicalMeta,
 } from "../../lib/api";
 import { KEY_SPECIES, prioritizeSpecies } from "../../lib/species";
+import { FigureExportButton } from "../common/Atlas";
 
 type Layer = "occurrence" | "richness" | "hosts" | "disease" | "prevalence" | "density";
 
@@ -108,6 +109,7 @@ export function MapPage() {
   const [mapData, setMapData] = useState<MapPointsData | null>(null);
   const [epiMeta, setEpiMeta] = useState<EpidemiologicalMeta | null>(null);
   const [loading, setLoading] = useState(true);
+  const [captureMap, setCaptureMap] = useState<() => HTMLCanvasElement>(() => () => undefined as unknown as HTMLCanvasElement);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -213,7 +215,11 @@ export function MapPage() {
 
       {/* Center - Map */}
       <div className="flex-1 relative">
-        <TickMap activeLayer={activeLayer} points={filteredPoints} />
+        <TickMap activeLayer={activeLayer} points={filteredPoints} registerCapture={setCaptureMap} />
+
+        <div className="absolute top-3 right-3 z-10">
+          <FigureExportButton captureFn={captureMap} filename="climsynoptick-map.png" />
+        </div>
 
         <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
           <SearchableSelect

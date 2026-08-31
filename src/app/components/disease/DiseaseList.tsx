@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { fetchEpidemiological, fetchEpidemiologicalMeta, fetchDiseaseCoordinates, type EpidemiologicalRecord, type EpidemiologicalMeta, type DiseaseCoordinatesMap, filterAfricanRecords } from "../../lib/api";
-import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader } from "../common/Atlas";
+import { fetchEpidemiological, fetchEpidemiologicalMeta, fetchDiseaseCoordinates, type EpidemiologicalRecord, type EpidemiologicalMeta, type DiseaseCoordinatesMap, filterAfricanRecords, isAfricanCountry } from "../../lib/api";
+import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader, FigureExportButton } from "../common/Atlas";
 import { EvidenceMap } from "../common/EvidenceMap";
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { FEBRILE_CATEGORIES, FEBRILE_GENERA_MAP, febrileGeneraOfLabel } from "../../lib/febrile";
@@ -76,8 +76,8 @@ function DonutPie({ data, colors, size = 160 }: { data: { name: string; count: n
   );
 }
 
-function DiseaseMiniMap({ records, diseaseCoords, diseaseName }: { records: EpidemiologicalRecord[]; diseaseCoords: DiseaseCoordinatesMap; diseaseName: string }) {
-  return <EvidenceMap entry={diseaseCoords[diseaseName]} diseaseName={diseaseName} />;
+function DiseaseMiniMap({ records, diseaseCoords, diseaseName, registerCapture }: { records: EpidemiologicalRecord[]; diseaseCoords: DiseaseCoordinatesMap; diseaseName: string; registerCapture?: (fn: () => HTMLCanvasElement) => void }) {
+  return <EvidenceMap entry={diseaseCoords[diseaseName]} diseaseName={diseaseName} registerCapture={registerCapture} />;
 }
 
 export function DiseaseList() {
@@ -89,6 +89,7 @@ export function DiseaseList() {
   const [selected, setSelected] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [diseaseCoords, setDiseaseCoords] = useState<DiseaseCoordinatesMap>({});
+  const [captureMap, setCaptureMap] = useState<() => HTMLCanvasElement>(() => () => undefined as unknown as HTMLCanvasElement);
 
   useEffect(() => {
     let active = true;
@@ -134,10 +135,11 @@ export function DiseaseList() {
     const total = categoryFilter === "all"
       ? meta.totalRecords
       : filteredDiseases.reduce((s, d) => s + (d.count || 0), 0);
+    const africanCountries = (meta.countries || []).filter((c) => isAfricanCountry(c.name));
     return {
       totalDiseases: filteredDiseases.length,
       totalRecords: total,
-      totalCountries: meta.countries.length,
+      totalCountries: africanCountries.length,
       diseases: filteredDiseases.slice(0, 30),
     };
   }, [meta, filteredDiseases, categoryFilter]);
@@ -173,13 +175,13 @@ export function DiseaseList() {
           title="Diseases & Pathogens"
           subtitle={
             overview ? (
-              <>{overview.totalDiseases} diseases detected in ticks across {overview.totalCountries} countries &middot; <span style={{ fontFamily: "monospace" }}>{overview.totalRecords.toLocaleString()}</span> records</>
+              <>{overview.totalDiseases} pathogens detected in ticks across {overview.totalCountries} countries &middot; <span style={{ fontFamily: "monospace" }}>{overview.totalRecords.toLocaleString()}</span> records</>
             ) : "Loading..."
           }
         />
 
         <FilterBar>
-          <FilterGroup label="Pathogen Category">
+          <FilterGroup label="Diseases Category">
             <div
               className="flex items-center gap-1 p-1"
               style={{ border: `1px solid ${atlas.border}`, borderRadius: 10, background: "#FFFFFF" }}
@@ -205,9 +207,9 @@ export function DiseaseList() {
               ))}
             </div>
           </FilterGroup>
-          <FilterGroup label="Disease">
+          <FilterGroup label="Pathogens">
             <Select value={selected} onChange={setSelected} minWidth={340}>
-              <option value="">Select a disease...</option>
+              <option value="">Select a pathogen...</option>
               {filteredDiseases.map((d) => (
                 <option key={d.name} value={d.name}>{d.name} ({d.count})</option>
               ))}
@@ -230,14 +232,14 @@ export function DiseaseList() {
             <StatCards
               className="grid-cols-1 sm:grid-cols-3"
               items={[
-                { label: "Total Diseases", value: overview.totalDiseases, hint: "pathogens detected in ticks" },
+                { label: "Total Pathogens", value: overview.totalDiseases, hint: "pathogens detected in ticks" },
                 { label: "Total Records", value: overview.totalRecords, hint: "epidemiological detections" },
                 { label: "Countries", value: overview.totalCountries, hint: "across Africa" },
               ]}
             />
 
             <div className="mb-6">
-              <h2 className="text-[13px] font-semibold mb-3" style={{ color: atlas.text }}>Browse Diseases</h2>
+              <h2 className="text-[13px] font-semibold mb-3" style={{ color: atlas.text }}>Browse Pathogens</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {overview.diseases.map((d) => {
                   const color = getDiseaseColor(d.name);
@@ -301,9 +303,9 @@ export function DiseaseList() {
                 ]}
               />
 
-              <Panel title="Geographic Distribution" className="mb-6">
+              <Panel title="Geographic Distribution" className="mb-6" action={<FigureExportButton captureFn={captureMap} filename={`disease-map-${selected}.png`} />}>
                 <div style={{ height: 360 }}>
-                  <DiseaseMiniMap records={records} diseaseCoords={diseaseCoords} diseaseName={selected} />
+                  <DiseaseMiniMap records={records} diseaseCoords={diseaseCoords} diseaseName={selected} registerCapture={setCaptureMap} />
                 </div>
               </Panel>
 

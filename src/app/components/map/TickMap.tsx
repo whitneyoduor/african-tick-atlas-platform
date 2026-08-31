@@ -10,9 +10,10 @@ type Layer = "occurrence" | "richness" | "hosts" | "disease" | "prevalence" | "d
 interface TickMapProps {
   activeLayer: Layer;
   points: MapPoint[];
+  registerCapture?: (fn: () => HTMLCanvasElement) => void;
 }
 
-export function TickMap({ activeLayer, points }: TickMapProps) {
+export function TickMap({ activeLayer, points, registerCapture }: TickMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const mapObj = useRef<maplibregl.Map | null>(null);
   const ready = useRef(false);
@@ -21,6 +22,12 @@ export function TickMap({ activeLayer, points }: TickMapProps) {
 
   pointsRef.current = points;
   layerRef.current = activeLayer;
+
+  useEffect(() => {
+    if (!registerCapture) return;
+    registerCapture(() => (mapObj.current ? mapObj.current.getCanvas() : undefined as unknown as HTMLCanvasElement));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registerCapture]);
 
   const geojsonData = useMemo(() => buildGeoJSON(points), [points]);
 

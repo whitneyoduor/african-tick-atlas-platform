@@ -1,186 +1,143 @@
 import { useState, useRef, useCallback } from "react";
-import { fetchEpidemiological, exportAsCSV } from "../../lib/api";
+import { atlas, PageHeader, Panel, FigureExportButton } from "../common/Atlas";
+
+interface FigureExportTarget {
+  id: string;
+  label: string;
+  description: string;
+  pageRoute: string;
+  ref?: React.RefObject<HTMLElement>;
+  captureFn?: () => HTMLCanvasElement;
+}
 
 export function Downloads() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [format, setFormat] = useState<"csv" | "geojson">("csv");
-  const [recordCount, setRecordCount] = useState<number | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const [exporting, setExporting] = useState<string | null>(null);
 
-  const handleDownload = useCallback(async () => {
-    if (loading) return;
-    setLoading(true);
-    setError(null);
-    setSuccess(false);
-    setRecordCount(null);
+  const figureTargets: FigureExportTarget[] = [
+    {
+      id: "trends-chart",
+      label: "Temporal Trends Chart",
+      description: "Yearly tick occurrence trends with brush selection",
+      pageRoute: "/trends",
+    },
+    {
+      id: "febrile-choropleth",
+      label: "Febrile Pathogens Choropleth",
+      description: "Geographic distribution of febrile illness pathogens by genus",
+      pageRoute: "/febrile",
+    },
+    {
+      id: "disease-map",
+      label: "Disease Distribution Map",
+      description: "Point map of selected pathogen occurrences",
+      pageRoute: "/diseases",
+    },
+    {
+      id: "species-map",
+      label: "Species Range Map",
+      description: "Tick species occurrence map with host/pathogen associations",
+      pageRoute: "/species",
+    },
+    {
+      id: "climsynoptick-map",
+      label: "CLIMSYNOPTICK Choropleth",
+      description: "Admin-unit choropleth of livestock, tick, facility, and pathogen layers",
+      pageRoute: "/climsynoptick",
+    },
+  ];
 
-    const controller = new AbortController();
-    abortRef.current = controller;
-
+  const handleFigureExport = useCallback(async (target: FigureExportTarget) => {
+    setExporting(target.id);
     try {
-      if (format === "csv") {
-        const res = await fetchEpidemiological({ limit: 50000, signal: controller.signal });
-        if (controller.signal.aborted) return;
-        const records = res.data;
-        setRecordCount(records.length);
-        exportAsCSV(records);
-      } else {
-        const res = await fetch("/tick_occurrences.geojson", { signal: controller.signal });
-        if (controller.signal.aborted) return;
-        if (!res.ok) throw new Error("Failed to fetch occurrence data");
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "tick_occurrences.geojson";
-        a.click();
-        URL.revokeObjectURL(url);
-        try {
-          const meta = await fetch("/tick_occurrences.meta.json", { signal: controller.signal });
-          if (meta.ok) {
-            const m = await meta.json();
-            setRecordCount(m.features);
-          }
-        } catch { /* count display is optional */ }
-      }
-      setSuccess(true);
-    } catch (e: any) {
-      if (e.name === "AbortError") return;
-      setError(e.message || "Download failed. Please try again.");
+      // Note: The actual capture would require the target component to expose its canvas/ref
+      // For now, show a message directing user to the page
+      const url = target.pageRoute;
+      window.open(url, "_blank");
     } finally {
-      if (!controller.signal.aborted) {
-        setLoading(false);
-        abortRef.current = null;
-      }
+      setExporting(null);
     }
-  }, [format, loading]);
-
-  const handleCancel = useCallback(() => {
-    abortRef.current?.abort();
-    setLoading(false);
-    setError(null);
   }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold" style={{ color: "var(--text-primary)" }}>Data Downloads</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>Download tick surveillance data in multiple formats</p>
+        <h1 className="text-2xl font-semibold" style={{ color: "var(--text-primary)" }}>Figure Downloads</h1>
+        <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
+          Raw data downloads are currently restricted. You can export figures (PNG) from the main analytical pages.
+        </p>
       </div>
 
-      <div className="grid grid-cols-[1fr_380px] gap-8">
-        <div className="rounded-lg border p-6 space-y-6" style={{ borderColor: "var(--border)", background: "var(--card-bg)" }}>
-          <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Download Configuration</h3>
-
-          <div>
-            <label className="text-xs font-medium uppercase tracking-wider mb-2.5 block" style={{ color: "var(--text-muted)" }}>Data Format</label>
-            <div className="grid grid-cols-2 gap-2.5">
-              {(["csv", "geojson"] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => { if (!loading) setFormat(f); }}
-                  className="text-xs font-medium px-4 py-3 rounded-lg border transition-all"
-                  style={{
-                    borderColor: format === f ? "var(--accent-teal)" : "var(--border)",
-                    background: format === f ? "var(--accent-teal-light)" : "var(--card-bg)",
-                    color: format === f ? "var(--accent-teal)" : "var(--text-muted)",
-                  }}
-                >
-                  <div className="font-semibold">{f.toUpperCase()}</div>
-                  <div className="text-[10px] mt-0.5" style={{ color: "var(--text-muted)" }}>
-                    {f === "csv" ? "Epidemiological records" : "Occurrence points"}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2.5">
-            <button
-              onClick={loading ? handleCancel : handleDownload}
-              className="w-full text-sm font-medium px-4 py-2.5 rounded-lg transition-all flex items-center justify-center gap-2.5"
-              style={{
-                background: loading ? "var(--page-bg)" : "var(--accent-teal)",
-                color: loading ? "var(--text-muted)" : "#fff",
-                border: loading ? "1px solid var(--border)" : "1px solid var(--accent-teal)",
-              }}
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2" style={{ borderColor: "var(--text-muted)", borderTopColor: "transparent" }} />
-                  <span>Downloading...</span>
-                </>
-              ) : (
-                <span>Download {format.toUpperCase()}</span>
-              )}
-            </button>
-            {loading && (
-              <button
-                onClick={handleCancel}
-                className="w-full text-xs py-1 transition-colors hover:underline"
-                style={{ color: "var(--text-muted)" }}
-              >
-                Cancel
-              </button>
-            )}
-          </div>
-
-          {error && (
-            <div className="text-xs rounded-lg px-3 py-2.5 flex items-center justify-between" style={{ background: "var(--accent-red-light)", color: "var(--accent-red)" }}>
-              <span>{error}</span>
-              <button onClick={() => setError(null)} className="ml-2 font-bold">&times;</button>
-            </div>
-          )}
-
-          {success && (
-            <div className="text-xs rounded-lg px-3 py-2.5 flex items-center justify-between" style={{ background: "var(--accent-teal-light)", color: "var(--accent-teal)" }}>
-              <span className="font-medium">Downloaded {recordCount?.toLocaleString()} records successfully</span>
-              <button onClick={() => { setSuccess(false); setRecordCount(null); }} className="ml-2" style={{ color: "var(--text-muted)" }}>&times;</button>
-            </div>
-          )}
+      <div className="rounded-lg border p-6 space-y-6" style={{ borderColor: "var(--border)", background: "var(--card-bg)" }}>
+        <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Data Access Notice</h3>
+        <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+          The underlying tick surveillance data (CSV, GeoJSON) is not publicly downloadable at this time.
+          Data will be made available for download once sustainable funding is secured to support platform maintenance
+          and open-access distribution. Please contact the ICIPE platform team for data access requests.
+        </p>
+        <div className="flex items-center gap-3 p-3 rounded-md" style={{ background: "var(--accent-amber-light)", border: "1px solid var(--accent-amber)" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--accent-amber)" }}>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span className="text-sm" style={{ color: "var(--accent-amber)" }}>
+            Raw data access requires a data-sharing agreement. Figure exports are freely available.
+          </span>
         </div>
+      </div>
 
-        <div className="space-y-4">
-          <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", background: "var(--card-bg)" }}>
-            <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--text-primary)" }}>Data Dictionary</h3>
-            <p className="text-[11px] mb-2" style={{ color: "var(--text-muted)" }}>
-              <strong style={{ color: "var(--text-primary)" }}>CSV</strong> — epidemiological records: disease, hosts, method, incidence.
-            </p>
-            <div className="space-y-1.5">
-              {[
-                { field: "species", desc: "Tick species name" },
-                { field: "yearOfStudy", desc: "Year or date range" },
-                { field: "yearStart", desc: "Study start year" },
-                { field: "yearEnd", desc: "Study end year" },
-                { field: "country", desc: "Country of collection" },
-                { field: "epidemiologicalDisease", desc: "Associated disease" },
-                { field: "relatedHosts", desc: "Host species" },
-                { field: "methodOfExtraction", desc: "Collection method" },
-                { field: "epidemiologicalIncidences", desc: "Incidence value" },
-                { field: "title", desc: "Source publication" },
-                { field: "links", desc: "Source URL" },
-              ].map((f) => (
-                <div key={f.field} className="flex items-center gap-2.5 py-1">
-                  <code className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--accent-teal-light)", color: "var(--accent-teal)", minWidth: 100, fontFamily: "monospace" }}>{f.field}</code>
-                  <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>{f.desc}</span>
+      <div className="rounded-lg border p-6" style={{ borderColor: "var(--border)", background: "var(--card-bg)" }}>
+        <h3 className="text-sm font-semibold mb-5" style={{ color: "var(--text-primary)" }}>Export Figures (PNG)</h3>
+        <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
+          Navigate to each page and use the figure export button (camera icon) in chart/map panels to download publication-ready PNGs.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {figureTargets.map((t) => (
+            <div key={t.id} className="rounded-lg border p-4 transition-all hover:shadow-md" style={{ borderColor: "var(--border)", background: "var(--card-bg)" }}>
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 flex-shrink-0" style={{ background: "var(--accent-teal-light)", color: "var(--accent-teal)" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
                 </div>
-              ))}
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>{t.label}</div>
+                  <div className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>{t.description}</div>
+                </div>
+              </div>
+              <button
+                onClick={() => handleFigureExport(t)}
+                disabled={exporting === t.id}
+                className="w-full mt-3 text-xs font-medium px-3 py-2 rounded-lg border transition-all flex items-center justify-center gap-1.5"
+                style={{
+                  borderColor: "var(--border)",
+                  background: "var(--page-bg)",
+                  color: "var(--text-sub)",
+                  cursor: exporting === t.id ? "not-allowed" : "pointer",
+                  opacity: exporting === t.id ? 0.6 : 1,
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span>{exporting === t.id ? "Opening..." : "Go to page & export"}</span>
+              </button>
             </div>
-            <p className="text-[11px] mt-3" style={{ color: "var(--text-muted)" }}>
-              <strong style={{ color: "var(--text-primary)" }}>GeoJSON</strong> — tick occurrence points with species, country, and year properties (GBIF-derived).
-            </p>
-          </div>
-
-          <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", background: "var(--card-bg)" }}>
-            <h3 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-primary)" }}>License</h3>
-            <p className="text-[11px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
-              Data is made available under the <strong style={{ color: "var(--text-primary)" }}>Creative Commons Attribution 4.0 International</strong> license.
-              Please cite the African Tick Surveillance Atlas when using this data.
-            </p>
-          </div>
+          ))}
         </div>
+      </div>
+
+      <div className="rounded-lg border p-6" style={{ borderColor: "var(--border)", background: "var(--card-bg)" }}>
+        <h3 className="text-sm font-semibold mb-3" style={{ color: "var(--text-primary)" }}>License</h3>
+        <p className="text-[11px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
+          Figures exported from this platform are made available under the{" "}
+          <strong style={{ color: "var(--text-primary)" }}>Creative Commons Attribution 4.0 International</strong> license.
+          Please cite the African Tick Surveillance Atlas when using these figures.
+        </p>
       </div>
     </div>
   );

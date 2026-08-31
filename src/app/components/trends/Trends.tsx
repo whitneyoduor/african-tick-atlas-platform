@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchEpidemiological, type EpidemiologicalRecord } from "../../lib/api";
-import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, SourceNote, PageLoader } from "../common/Atlas";
+import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, SourceNote, PageLoader, FigureExportButton } from "../common/Atlas";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Brush } from "recharts";
 
 function extractYear(raw: string | null): number | null {
@@ -149,6 +149,7 @@ export function Trends() {
   const [speciesFilter, setSpeciesFilter] = useState("all");
   const [countryFilter, setCountryFilter] = useState("all");
   const [brushRange, setBrushRange] = useState<[number, number]>([1930, 2025]);
+  const trendRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchEpidemiological({ limit: 50000 })
@@ -346,12 +347,16 @@ export function Trends() {
             </span>
           }
           action={
-            <span className="text-[11px]" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
-              {brushRange[0]} – {brushRange[1]}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-[11px]" style={{ color: atlas.textMuted, fontFamily: "monospace" }}>
+                {brushRange[0]} – {brushRange[1]}
+              </span>
+              <FigureExportButton targetRef={trendRef} filename="trends-chart.png" />
+            </div>
           }
           className="mb-6"
         >
+          <div ref={trendRef}>
           <ResponsiveContainer width="100%" height={340}>
             <AreaChart data={yearlyData}>
               <defs>
@@ -401,6 +406,7 @@ export function Trends() {
               />
             </AreaChart>
           </ResponsiveContainer>
+          </div>
         </Panel>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">

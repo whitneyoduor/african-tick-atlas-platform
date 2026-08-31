@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router";
 import { fetchEpidemiological, fetchEpidemiologicalMeta, fetchGenBankStats, type EpidemiologicalRecord, type EpidemiologicalMeta, type GenBankStats } from "../../lib/api";
 import { prioritizeSpecies } from "../../lib/species";
-import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader } from "../common/Atlas";
+import { atlas, tooltipStyle, PageHeader, StatCards, Panel, FilterBar, FilterGroup, Select, Chip, SourceNote, PageLoader, FigureExportButton } from "../common/Atlas";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 export function SpeciesList() {
@@ -15,6 +15,7 @@ export function SpeciesList() {
   const [selected, setSelected] = useState("");
   const [genbankStats, setGenbankStats] = useState<GenBankStats | null>(null);
   const [genbankLoading, setGenbankLoading] = useState(false);
+  const top15Ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -292,7 +293,8 @@ export function SpeciesList() {
               ]}
             />
 
-            <Panel title="Top 15 Species by Record Count" className="mb-6">
+            <Panel title="Top 15 Species by Record Count" action={<FigureExportButton targetRef={top15Ref} filename="species-top15.png" />} className="mb-6">
+              <div ref={top15Ref}>
               <div className="flex flex-col lg:flex-row items-center gap-6">
                 <div style={{ width: 320, height: 320, flexShrink: 0 }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -340,6 +342,7 @@ export function SpeciesList() {
                     );
                   })}
                 </div>
+              </div>
               </div>
             </Panel>
           </>

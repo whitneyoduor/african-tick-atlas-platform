@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { atlas, PageHeader, StatCards, Panel, FilterBar, FilterGroup, MenuSelect, Chip, SourceNote, PageLoader } from "../common/Atlas";
+import { atlas, PageHeader, StatCards, Panel, FilterBar, FilterGroup, MenuSelect, Chip, SourceNote, PageLoader, FigureExportButton } from "../common/Atlas";
 import {
   fetchLivestock,
   fetchCountries,
@@ -82,6 +82,7 @@ export function HealthAccess() {
   const [tickSpecies, setTickSpecies] = useState<string | null>(null);
   const [hovered, setHovered] = useState<any | null>(null);
   const [pinned, setPinned] = useState<any | null>(null);
+  const [captureMap, setCaptureMap] = useState<() => HTMLCanvasElement>(() => () => undefined as unknown as HTMLCanvasElement);
 
   useEffect(() => {
     let active = true;
@@ -326,11 +327,14 @@ export function HealthAccess() {
                     : `${activeMetric.blurb} — GADM-level choropleth.`}
                 </p>
               </div>
-              {activeAfrica != null && (
-                <Chip tone="amber">
-                  Africa · {fmtNum(activeAfrica as number)} {activeMetric.unit}
-                </Chip>
-              )}
+              <div className="flex items-center gap-3">
+                {activeAfrica != null && (
+                  <Chip tone="amber">
+                    Africa · {fmtNum(activeAfrica as number)} {activeMetric.unit}
+                  </Chip>
+                )}
+                <FigureExportButton captureFn={captureMap} filename="climsynoptick-map.png" />
+              </div>
             </div>
             <FilterBar>
               <FilterGroup label="Layer">
@@ -415,6 +419,7 @@ export function HealthAccess() {
               facet={facet}
               onHover={onHover}
               onSelect={onSelect}
+              registerCapture={setCaptureMap}
             />
             {data && (
               <div className="text-[10px] px-5 py-2 flex flex-wrap gap-x-4 gap-y-1" style={{ color: atlas.textMuted, borderTop: `1px solid ${atlas.grid}` }}>

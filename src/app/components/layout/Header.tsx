@@ -4,7 +4,7 @@ import { useState } from "react";
 const navItems = [
   { path: "/", label: "Maps" },
   { path: "/trends", label: "Trends" },
-  { path: "/febrile", label: "Febrile Pathogens" },
+  { path: "/febrile", label: "Febrile Illnesses Pathogens" },
   { path: "/species", label: "Species" },
   { path: "/diseases", label: "Diseases" },
   { path: "/climsynoptick", label: "CLIMSYNOPTICK" },
