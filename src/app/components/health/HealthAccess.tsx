@@ -6,7 +6,6 @@ import {
   fetchFacilities,
   HealthMap,
   METRICS,
-  METRIC_GROUPS,
   FAC_CLASSES,
   type MetricKey,
   type LivestockData,
@@ -235,33 +234,22 @@ export function HealthAccess() {
           }
         />
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-          {METRIC_GROUPS.map((g) => {
-            const ms = METRICS.filter((m) => m.group === g);
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+          {METRICS.map((m) => {
+            const on = metric === m.key;
             return (
-              <div key={g} className="rounded-lg bg-white px-4 py-3 col-span-2 sm:col-span-1"
-                style={{ border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow }}>
-                <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: atlas.textMuted }}>{g}</div>
-                <div className="space-y-1">
-                  {ms.map((m) => {
-                    const on = metric === m.key;
-                    return (
-                      <button
-                        key={m.key}
-                        onClick={() => setMetric(m.key)}
-                        className="w-full text-left flex items-center gap-2 text-[12px] cursor-pointer rounded px-1 py-0.5"
-                        style={{ background: on ? "#F1F7F6" : "transparent", color: atlas.text }}
-                      >
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: m.color }} />
-                        <span className="truncate flex-1" style={{ fontWeight: on ? 600 : 400 }}>{m.label}</span>
-                        <span className="shrink-0 tabular-nums" style={{ color: on ? atlas.teal : atlas.textSub, fontFamily: "monospace" }}>
-                          {africa && africa[m.key] != null ? fmtNum(africa[m.key] as number) : "—"}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <button
+                key={m.key}
+                onClick={() => setMetric(m.key)}
+                className="rounded-lg bg-white px-4 py-3 flex items-center gap-2 text-[12px] cursor-pointer text-left"
+                style={{ border: `1px solid ${on ? m.color : atlas.border}`, boxShadow: atlas.shadow, background: on ? "#F1F7F6" : "#fff" }}
+              >
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: m.color }} />
+                <span className="truncate flex-1" style={{ fontWeight: on ? 600 : 400, color: atlas.text }}>{m.label}</span>
+                <span className="shrink-0 tabular-nums" style={{ color: on ? atlas.teal : atlas.textSub, fontFamily: "monospace" }}>
+                  {africa && africa[m.key] != null ? fmtNum(africa[m.key] as number) : "—"}
+                </span>
+              </button>
             );
           })}
         </div>

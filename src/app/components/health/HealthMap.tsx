@@ -13,24 +13,21 @@ export interface HealthMetric {
   color: string;
   kind: MetricKind;
   noun: string;
-  group: string;
   blurb: string;
 }
 
 export const METRICS: HealthMetric[] = [
-  { key: "cattle", label: "Cattle density", unit: "heads/km²", color: "#D97706", kind: "density", noun: "heads", group: "Livestock & population", blurb: "Modeled cattle density" },
-  { key: "goat", label: "Goat density", unit: "heads/km²", color: "#0F766E", kind: "density", noun: "heads", group: "Livestock & population", blurb: "Modeled goat density" },
-  { key: "sheep", label: "Sheep density", unit: "heads/km²", color: "#BE123C", kind: "density", noun: "heads", group: "Livestock & population", blurb: "Modeled sheep density" },
-  { key: "population", label: "Human population", unit: "people/km²", color: "#7C3AED", kind: "density", noun: "people", group: "Livestock & population", blurb: "Admin-2 population density" },
-  { key: "mammal", label: "Mammal richness", unit: "species", color: "#4B5563", kind: "rate", noun: "species", group: "Hosts", blurb: "Mean wild-mammal species per district" },
-  { key: "malaria", label: "Malaria incidence", unit: "cases/1000", color: "#B91C1C", kind: "rate", noun: "cases per 1000", group: "Hosts", blurb: "Admin-1 malaria incidence rate (2024)" },
-  { key: "facility", label: "Health facilities", unit: "facilities", color: "#0EA5E9", kind: "count", noun: "facilities", group: "Records & access", blurb: "Mapped facilities per district" },
-  { key: "tick", label: "Tick occurrence", unit: "records", color: "#65A30D", kind: "count", noun: "records", group: "Records & access", blurb: "Tick occurrence records per district" },
-  { key: "tickvec", label: "Ticks with pathogens", unit: "records", color: "#166534", kind: "count", noun: "records", group: "Records & access", blurb: "Ticks of species known to carry tick-borne pathogens, per district" },
-  { key: "pathogen", label: "Pathogen records", unit: "records", color: "#D946EF", kind: "count", noun: "records", group: "Records & access", blurb: "Disease / pathogen records per district" },
+  { key: "cattle", label: "Cattle density", unit: "heads/km²", color: "#D97706", kind: "density", noun: "heads", blurb: "Modeled cattle density" },
+  { key: "goat", label: "Goat density", unit: "heads/km²", color: "#0F766E", kind: "density", noun: "heads", blurb: "Modeled goat density" },
+  { key: "sheep", label: "Sheep density", unit: "heads/km²", color: "#BE123C", kind: "density", noun: "heads", blurb: "Modeled sheep density" },
+  { key: "population", label: "Human population", unit: "people/km²", color: "#7C3AED", kind: "density", noun: "people", blurb: "Admin-2 population density" },
+  { key: "mammal", label: "Mammal richness", unit: "species", color: "#4B5563", kind: "rate", noun: "species", blurb: "Mean wild-mammal species per district" },
+  { key: "malaria", label: "Malaria incidence", unit: "cases/1000", color: "#B91C1C", kind: "rate", noun: "cases per 1000", blurb: "Admin-1 malaria incidence rate (2024)" },
+  { key: "facility", label: "Health facilities", unit: "facilities", color: "#0EA5E9", kind: "count", noun: "facilities", blurb: "Mapped facilities per district" },
+  { key: "tick", label: "Tick occurrence", unit: "records", color: "#65A30D", kind: "count", noun: "records", blurb: "Tick occurrence records per district" },
+  { key: "tickvec", label: "Ticks with pathogens", unit: "records", color: "#166534", kind: "count", noun: "records", blurb: "Ticks of species known to carry tick-borne pathogens, per district" },
+  { key: "pathogen", label: "Pathogen records", unit: "records", color: "#D946EF", kind: "count", noun: "records", blurb: "Disease / pathogen records per district" },
 ];
-
-export const METRIC_GROUPS = ["Livestock & population", "Hosts", "Records & access"];
 
 export const NO_DATA_FILL = "#E4E8ED";
 
