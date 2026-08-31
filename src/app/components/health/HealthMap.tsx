@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import { atlas } from "../common/Atlas";
 
-export type MetricKey = "cattle" | "goat" | "sheep" | "population" | "mammal" | "malaria" | "facility" | "tick" | "tickvec" | "pathogen";
+export type MetricKey = "cattle" | "goat" | "sheep" | "population" | "mammal" | "malaria" | "facility" | "tick" | "pathogen";
 
 export type MetricKind = "density" | "rate" | "count";
 
@@ -25,7 +25,6 @@ export const METRICS: HealthMetric[] = [
   { key: "malaria", label: "Malaria incidence", unit: "cases/1000", color: "#B91C1C", kind: "rate", noun: "cases per 1000", blurb: "Admin-1 malaria incidence rate (2024)" },
   { key: "facility", label: "Health facilities", unit: "facilities", color: "#0EA5E9", kind: "count", noun: "facilities", blurb: "Mapped facilities per district" },
   { key: "tick", label: "Tick occurrence", unit: "records", color: "#65A30D", kind: "count", noun: "records", blurb: "Tick occurrence records per district" },
-  { key: "tickvec", label: "Ticks with pathogens", unit: "records", color: "#166534", kind: "count", noun: "records", blurb: "Ticks of species known to carry tick-borne pathogens, per district" },
   { key: "pathogen", label: "Pathogen records", unit: "records", color: "#D946EF", kind: "count", noun: "records", blurb: "Disease / pathogen records per district" },
 ];
 

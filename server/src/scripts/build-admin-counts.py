@@ -60,6 +60,7 @@ CN_COUNTRIES = {
     "south sudan": "SSD", "sao tome and principe": "STP", "swaziland": "SWZ",
     "chad": "TCD", "togo": "TGO", "tunisia": "TUN", "tanzania": "TZA",
     "uganda": "UGA", "south africa": "ZAF", "zambia": "ZMB", "zimbabwe": "ZWE",
+    "western sahara": "ESH",
 }
 
 # point-data country name (normalised) -> canonical CN

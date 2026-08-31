@@ -13,7 +13,6 @@
 // Cabo Verde, etc.) are no longer needed at render time.
 const fs = require("fs");
 const path = require("path");
-const XLSX = require("../server/node_modules/xlsx");
 
 const ROOT = path.resolve(__dirname, "..");
 const PUBLIC = path.join(ROOT, "public");

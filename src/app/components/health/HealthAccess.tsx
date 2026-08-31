@@ -292,13 +292,6 @@ export function HealthAccess() {
               active: metric === "pathogen",
               onClick: () => setMetric("pathogen"),
             },
-            {
-              label: "Vector ticks",
-              value: africa?.tickvec ?? 0,
-              hint: "carrier-species ticks",
-              active: metric === "tickvec",
-              onClick: () => setMetric("tickvec"),
-            },
           ]}
         />
 
@@ -331,7 +324,7 @@ export function HealthAccess() {
                   onChange={(v) => setMetric(v as MetricKey)}
                   minWidth={230}
                   options={METRICS
-                    .filter((m) => m.key !== "tickvec" && m.key !== "pathogen")
+                    .filter((m) => m.key !== "pathogen")
                     .map((m) => ({ value: m.key, label: m.label, dot: m.color, sub: "" }))}
                 />
               </FilterGroup>
@@ -609,10 +602,9 @@ export function HealthAccess() {
             the IUCN/SERVIR Area of Habitat 2021 5 km mosaic, standing in for wild tick-host availability. Malaria incidence is
             the Malaria Atlas Project admin-1 rate (cases per thousand, 2024) attached to every unit under a matching admin-1
             unit. Mapped health facilities (2015 sub-Saharan census), GBIF tick occurrences and tick-borne disease / pathogen
-            records are counted per unit — the facility layer can be split into its five classes. "Ticks with pathogens" counts
-            tick occurrences whose species is a known carrier of a tick-borne pathogen. Units without data for a layer are grey,
-            so gaps are never mistaken for zeros. Numeric breakdown of all ten layers for every hovered unit is available in the
-            district profile panel.
+            records are counted per unit — the facility layer can be split into its five classes. Units without data for a
+            layer are grey, so gaps are never mistaken for zeros. Numeric breakdown of all nine layers for every hovered unit
+            is available in the district profile panel.
           </div>
         </Panel>
 
@@ -621,9 +613,8 @@ export function HealthAccess() {
           Population: UNFPA/COD admin-2 estimates (cod_population_admin2.csv), keyed by ADM2_PCODE; reference years vary by
           country. Mammals: IUCN/SERVIR Area of Habitat mammal species richness 2021, 5 km World-Mollweide mosaic.
           Malaria: Malaria Atlas Project admin-1 incidence rate 2024 (cases per thousand), joined by admin-1 name.
-          Facilities: sub-Saharan health-facility census 2015. Tick occurrences: GBIF. "Ticks with pathogens" = tick
-          occurrences of species known to carry tick-borne pathogens. Pathogens: atlas disease/pathogen records. Density in
-          heads or people per km²; rates and counts as reported per admin unit.
+          Facilities: sub-Saharan health-facility census 2015. Tick occurrences: GBIF. Pathogens: atlas disease/pathogen
+          records. Density in heads or people per km²; rates and counts as reported per admin unit.
         </SourceNote>
       </div>
     </div>
