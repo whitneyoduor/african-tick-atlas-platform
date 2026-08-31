@@ -10,7 +10,7 @@ export function Footer() {
           <span style={{ color: "rgba(255,255,255,0.4)" }}>&copy; {new Date().getFullYear()} African Tick Surveillance Atlas. ICIPE.</span>
           <div className="flex gap-4">
             <button onClick={() => navigate("/about")} style={{ color: "rgba(255,255,255,0.4)" }} className="hover:underline">About</button>
-            <button onClick={() => navigate("/downloads")} style={{ color: "rgba(255,255,255,0.4)" }} className="hover:underline">Downloads</button>
+            <button onClick={() => navigate("/references")} style={{ color: "rgba(255,255,255,0.4)" }} className="hover:underline">References</button>
           </div>
         </div>
       </div>

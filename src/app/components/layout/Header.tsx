@@ -1,16 +1,17 @@
 import { useLocation, useNavigate } from "react-router";
 import { useState } from "react";
+import { preloadRoute, type RouteKey } from "../../lib/lazyRoutes";
 
-const navItems = [
-  { path: "/", label: "Maps" },
-  { path: "/trends", label: "Trends" },
-  { path: "/febrile", label: "Febrile Illnesses Pathogens" },
-  { path: "/species", label: "Species" },
-  { path: "/diseases", label: "Diseases" },
-  { path: "/climsynoptick", label: "CLIMSYNOPTICK" },
-  { path: "/environmental", label: "Tick Cohort" },
-  { path: "/downloads", label: "Downloads" },
-  { path: "/about", label: "About" },
+const navItems: { path: string; label: string; preload?: RouteKey }[] = [
+  { path: "/", label: "Maps", preload: "map" },
+  { path: "/trends", label: "Trends", preload: "trends" },
+  { path: "/febrile", label: "Febrile Illnesses Pathogens", preload: "febrile" },
+  { path: "/species", label: "Species", preload: "speciesList" },
+  { path: "/diseases", label: "Diseases", preload: "diseaseList" },
+  { path: "/climsynoptick", label: "CLIMSYNOPTICK", preload: "health" },
+  { path: "/environmental", label: "Tick Cohort", preload: "environmental" },
+  { path: "/references", label: "References", preload: "references" },
+  { path: "/about", label: "About", preload: "about" },
 ];
 
 export function Header() {
@@ -50,6 +51,8 @@ export function Header() {
                 <button
                   key={item.path}
                   onClick={() => navigate(item.path)}
+                  onMouseEnter={() => item.preload && preloadRoute(item.preload)}
+                  onFocus={() => item.preload && preloadRoute(item.preload)}
                   className="px-2.5 py-1.5 text-[11px] font-medium transition-colors whitespace-nowrap"
                   style={{
                     color: active ? "#FFFFFF" : "rgba(255,255,255,0.55)",

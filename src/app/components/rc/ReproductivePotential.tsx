@@ -103,6 +103,7 @@ export function ReproductivePotential() {
   const [geoJson, setGeoJson] = useState<GeoJSON.FeatureCollection | null>(null);
   const [loadingCountry, setLoadingCountry] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [dataError, setDataError] = useState(false);
   const [hoverAdm2, setHoverAdm2] = useState<{ name: string; value: number } | null>(null);
 
   const geoRef = useRef<GeoJSON.FeatureCollection | null>(null);
@@ -145,6 +146,7 @@ export function ReproductivePotential() {
       setGeoJson(geo);
       geoRef.current = geo;
       dataRef.current = data;
+      setDataError(!data || !geo);
       setLoadingCountry(false);
       setLoaded(true);
     });
@@ -424,6 +426,16 @@ export function ReproductivePotential() {
           </div>
           <div className="relative" style={{ height: 520 }}>
             <div ref={containerRef} className="w-full h-full" />
+            {dataError && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center">
+                <div className="px-5 py-4 rounded-md text-center" style={{ background: "rgba(255,255,255,0.97)", border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow }}>
+                  <div className="text-[13px] font-medium" style={{ color: atlas.text }}>No data</div>
+                  <div className="text-[11px] mt-1" style={{ color: atlas.textSub }}>
+                    Cohort reproductive potential data is not available for {countryName || "this country"}.
+                  </div>
+                </div>
+              </div>
+            )}
             {hoverAdm2 && (
               <div className="absolute top-3 left-3 z-10 px-3 py-2 rounded-md" style={{ background: "rgba(255,255,255,0.96)", border: `1px solid ${atlas.border}`, boxShadow: atlas.shadow }}>
                 <div className="text-[11px] font-medium" style={{ color: atlas.text }}>{hoverAdm2.name}</div>

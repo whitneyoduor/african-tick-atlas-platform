@@ -1,18 +1,19 @@
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import { BrowserRouter, Routes, Route, useParams, Navigate } from "react-router";
 import { Layout } from "./components/layout/Layout";
+import { routes } from "./lib/lazyRoutes";
 
-const MapPage = lazy(() => import("./components/map/MapPage").then(m => ({ default: m.MapPage })));
-const Trends = lazy(() => import("./components/trends/Trends").then(m => ({ default: m.Trends })));
-const SpeciesList = lazy(() => import("./components/species/SpeciesList").then(m => ({ default: m.SpeciesList })));
-const SpeciesPage = lazy(() => import("./components/species/SpeciesPage").then(m => ({ default: m.SpeciesPage })));
-const DiseaseList = lazy(() => import("./components/disease/DiseaseList").then(m => ({ default: m.DiseaseList })));
-const DiseasePage = lazy(() => import("./components/disease/DiseasePage").then(m => ({ default: m.DiseasePage })));
-const FebrilePathogens = lazy(() => import("./components/febrile/FebrilePathogens").then(m => ({ default: m.FebrilePathogens })));
-const ReproductivePotential = lazy(() => import("./components/rc/ReproductivePotential").then(m => ({ default: m.ReproductivePotential })));
-const HealthAccess = lazy(() => import("./components/health/HealthAccess").then(m => ({ default: m.HealthAccess })));
-const Downloads = lazy(() => import("./components/downloads/Downloads").then(m => ({ default: m.Downloads })));
-const About = lazy(() => import("./components/about/About").then(m => ({ default: m.About })));
+const { Component: MapPage } = routes.map;
+const { Component: Trends } = routes.trends;
+const { Component: SpeciesList } = routes.speciesList;
+const { Component: SpeciesPage } = routes.speciesPage;
+const { Component: DiseaseList } = routes.diseaseList;
+const { Component: DiseasePage } = routes.diseasePage;
+const { Component: FebrilePathogens } = routes.febrile;
+const { Component: ReproductivePotential } = routes.environmental;
+const { Component: HealthAccess } = routes.health;
+const { Component: References } = routes.references;
+const { Component: About } = routes.about;
 
 function SpeciesPageWrapper() {
   const { name } = useParams();
@@ -42,7 +43,7 @@ export default function App() {
           <Route path="environmental" element={<Suspense fallback={<Loading />}><ReproductivePotential /></Suspense>} />
           <Route path="health" element={<Navigate to="/climsynoptick" replace />} />
           <Route path="climsynoptick" element={<Suspense fallback={<Loading />}><HealthAccess /></Suspense>} />
-          <Route path="downloads" element={<Suspense fallback={<Loading />}><Downloads /></Suspense>} />
+          <Route path="references" element={<Suspense fallback={<Loading />}><References /></Suspense>} />
           <Route path="about" element={<Suspense fallback={<Loading />}><About /></Suspense>} />
           <Route path="*" element={<NotFound />} />
         </Route>
