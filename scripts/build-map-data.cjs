@@ -4,13 +4,17 @@
 //
 // The map pages previously downloaded the entire 42MB public/occurrences.json
 // only to render ~9-15k African points and discard the rest. map-points.json
-// encodes exactly what the map shows (~15k points) with string dictionaries,
+// encodes exactly what the map shows (~9.4k points) with string dictionaries,
 // cutting the map payload from ~42MB to well under 1MB.
 //
-// The Africa window matches the map's maxBounds (lon -25..55, lat -40..40) and
-// every point is verified to be on land using the Natural Earth 1:50m mask, so
-// the coarse isOnLand() boxes (which wrongly hid Madagascar, Comoros, Sao Tome,
-// Cabo Verde, etc.) are no longer needed at render time.
+// The Africa window matches the map's maxBounds (lon -25..55, lat -40..40) plus
+// an explicit African-country allow-list: the loose bbox alone would admit
+// southern-Europe/western-Asia records (Spain, Portugal, Italy, Greece, Turkiye,
+// Levant…) that are present in the source GBIF download but do not belong on an
+// African ticking map. Every point is also verified to be on land using the
+// Natural Earth 1:50m mask, so the coarse isOnLand() boxes (which wrongly hid
+// Madagascar, Comoros, Sao Tome, Cabo Verde, etc.) are no longer needed at
+// render time.
 const fs = require("fs");
 const path = require("path");
 
@@ -20,6 +24,29 @@ const DATA_DIR = path.join(ROOT, "server", "data");
 const LAND_FILE = path.join(DATA_DIR, "ne_50m_land.geojson");
 
 const AFRICA_BBOX = { west: -25, south: -40, east: 55, north: 40 };
+
+// The bbox alone is intentionally loose (it must contain Madagascar, Comoros,
+// Cabo Verde, etc.) but that also admits southern Europe and western Asia
+// (Spain, Portugal, Italy, Greece, Turkiye, Levant…) into the window, so the
+// map showed thousands of non-African points. Every point must also belong to
+// an African country (same rule as src/app/lib/api.ts#isAfricanCountry).
+const AFRICAN_COUNTRIES = new Set(
+  (
+    "Algeria|Angola|Benin|Botswana|Burkina Faso|Burundi|Cabo Verde|Cameroon|Central African Republic|" +
+      "Chad|Comoros|Congo|Congo, Democratic Republic of the|Democratic Republic of the Congo|Côte d'Ivoire|" +
+      "Ivory Coast|Djibouti|Egypt|Equatorial Guinea|Eritrea|Eswatini|Swaziland|Ethiopia|Gabon|Gambia|Ghana|" +
+      "Guinea|Guinea-Bissau|Kenya|Lesotho|Liberia|Libya|Madagascar|Malawi|Mali|Mauritania|Mauritius|Mayotte|" +
+      "Morocco|Mozambique|Namibia|Niger|Nigeria|Réunion|Rwanda|Sao Tome and Principe|Senegal|Seychelles|" +
+      "Sierra Leone|Somalia|South Africa|South Sudan|Sudan|Tanzania, United Republic of|" +
+      "United Republic of Tanzania|Togo|Tunisia|Uganda|Western Sahara|Zambia|Zimbabwe|Saint Helena"
+  )
+    .split("|")
+    .map((s) => s.trim())
+);
+
+function isAfricanCountry(country) {
+  return !!country && AFRICAN_COUNTRIES.has(String(country).trim());
+}
 
 // ---- load land mask ----
 const land = JSON.parse(fs.readFileSync(LAND_FILE, "utf8"));
@@ -121,6 +148,7 @@ for (const r of occ) {
   const lat = Number(r.latitude);
   const lon = Number(r.longitude);
   if (lon < AFRICA_BBOX.west || lon > AFRICA_BBOX.east || lat < AFRICA_BBOX.south || lat > AFRICA_BBOX.north) continue;
+  if (!isAfricanCountry(r.country)) continue;
   if (!onLand(lat, lon)) continue;
   const attrs = speciesDetail[String(r.species || "").trim().toLowerCase()] || { disease: "", host: "", method: "" };
   usable.push({

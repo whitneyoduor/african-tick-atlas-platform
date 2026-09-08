@@ -226,10 +226,7 @@ export function HealthAccess() {
           subtitle={
             <>
               A synoptic dashboard that layers climate- and host-driven livestock exposure against tick, pathogen and
-              health-system risk across Africa, at GADM district (admin-unit) resolution.{" "}
-              <span style={{ fontWeight: 600, color: atlas.text }}>
-                Hover any district for its full profile; districts without data are shown grey, never as zero.
-              </span>
+              health-system risk across Africa, at GADM district (admin-unit) resolution.
             </>
           }
         />

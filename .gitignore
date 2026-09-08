@@ -9,3 +9,4 @@ nul
 server/data/*
 !server/data/ne_50m_land.geojson
 server/prisma/*.db
+scripts/.gbif-cache/

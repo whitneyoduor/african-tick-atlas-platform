@@ -215,6 +215,13 @@ for (const [disease, entry] of Object.entries(coords)) {
 }
 
 const features = [];
+// Emit every drawable African country, not only those with mapped points:
+// countries with zero febrile records (e.g. Niger, Chad) appear as zero-valued
+// features so the map renders seamlessly with their partition boundaries
+// instead of leaving blank holes.
+for (const c of idx.countries) {
+  countryFeatures(c.gid);
+}
 for (const gid of featureCache.keys()) {
   const feats = featureCache.get(gid);
   if (!feats) continue;

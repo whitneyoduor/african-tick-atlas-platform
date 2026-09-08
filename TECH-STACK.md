@@ -103,7 +103,7 @@
 
 ### 4.1 MAPS (`/`) — MapPage + TickMap
 - **Purpose:** Interactive continental map of tick occurrence points across Africa.
-- **Data:** `public/map-points.json` (~15,012 compactly-encoded points, ~565 KB) + `epidemiological-meta.json` for filter lists.
+- **Data:** `public/map-points.json` (9,656 African-country-verified points, ~370 KB) + `epidemiological-meta.json` for filter lists.
 - **Six view layers:** Tick Occurrence (teal) · Species Richness (indigo) · Host Diversity (amber) · Associated Diseases (pathogen color-coded) · Prevalence (disease-present sized dots) · Density (heatmap).
 - **Filters (right panel + top bar):** species (searchable type-ahead), disease, country, host, collection method, year range; active-filter chips color-coded per dimension; key-species quick pills (R. appendiculatus, R. sanguineus, R. microplus, H. marginatum, H. rufipes).
 - **Interactions:** hover → pointer; click → popup (species, host, disease, country, year); result count badge; disease legend.
@@ -196,7 +196,7 @@ The frontend **never depends on these in production** — every endpoint has a s
 ### Data sources of truth
 | Source | Type | Used for |
 |---|---|---|
-| `server/data/tick_occurrence_simple.xlsx` | GBIF-derived spreadsheet (57.7 MB) | Occurrence records (**166,099** rows) |
+| `server/data/tick_occurrence_simple.xlsx` | GBIF-derived spreadsheet (57.7 MB) | Occurrence records (**166,099** rows; +2 GBIF API +288 iNaturalist merged = **166,389**) |
 | `server/data/ticks_epidemiological_data.xlsx` | Literature-derived spreadsheet (3.6 MB) | Epidemiological records (**12,212** cleaned rows) |
 | NCBI GenBank (E-utilities) | Live API | Molecular sequence records (~10.4k, 145 species) |
 | GADM ADM2 geopackage | Admin boundaries | `rc-data/geo/*.json` (50 countries) |
@@ -213,6 +213,8 @@ The frontend **never depends on these in production** — every endpoint has a s
 |---|---|
 | `server/src/import.ts` | `occurrences.json`, `occurrences-meta.json`, `epidemiological.json`, `epidemiological-meta.json` |
 | `scripts/build-map-data.cjs` | `map-points.json` (compact encoding), `tick_occurrences.geojson` |
+| `scripts/fetch_gbif_africa.py` | live GBIF Occurrence API enrichment (dedupes by GBIF key; resume via `.gbif-cache/fetched.json`) |
+| `scripts/fetch_inaturalist_africa.py` | iNaturalist REST observations enrichment (Africa bbox, per-species spatial dedupe ~0.05°) |
 | `server/src/scripts/export-genbank-static.ts` | `genbank/{slug}.json`, `genbank/{slug}_stats.json`, `genbank/_index.json` |
 | `server/src/scripts/export-disease-coords.ts` | `genbank/disease-coordinates.json` |
 | `server/src/scripts/export-rc-data.ts` | `rc-data/index.json`, `rc-data/countries/*.json` |
@@ -230,12 +232,13 @@ The frontend **never depends on these in production** — every endpoint has a s
 **Important:** several scripts augment the livestock GeoJSONs **in place** and must run in dependency order: `build-livestock-choropleth.py` → `build-population-geojson.py` → `build-health-metrics.py` → `build-admin-counts.py`.
 
 ### Current data volumes
-- Occurrence records: **166,099** (year range 1839–2026; Africa map shows 15,012 on-land points)
+- Occurrence records: **166,389** globally (year range 1839–2026); **9,656** are African-country-verified points on the map (Europe/Middle-East records in the source GBIF download are intentionally excluded)
+  - Enriched on top of the source download with `scripts/fetch_gbif_africa.py` (+2 live GBIF records) and `scripts/fetch_inaturalist_africa.py` (+288 iNaturalist observations), after confirming via the live GBIF API that the source download already contains essentially every coordinate-bearing African GBIF record for the five key species. A handful of African countries still have no georeferenced records in any public repository (e.g. Niger, Chad, Western Sahara for R. sanguineus); those are shown from literature/presence data instead of fabricated coordinates.
 - Epidemiological records: **12,212** (11,348 source records, replicate-normalized to 80 clean disease names so each disease detail page returns data)
 - Diseases/pathogens: **80** · Tick species: **236** · Hosts: **354** · Countries: **50** admin units (6,501 districts)
 - GenBank: **145 species**, ~10,414 records
 - Health facilities: **96,395** mapped (of 98,745)
-- Febrile map: 10,701 disease points → 10,315 mapped to ADM1 across 43 countries
+- Febrile map: 10,701 disease points → 10,315 mapped to ADM1 across 50 countries (countries with zero mapped points — Niger, Chad, Côte d'Ivoire, Eritrea, Equatorial Guinea, Sierra Leone, São Tomé — render in the zero shade with their partition boundaries via the all-countries iris in `build-febrile-choropleth.cjs`, so the map stays seamless and honest)
 
 ---
 
