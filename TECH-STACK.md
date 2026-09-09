@@ -147,7 +147,7 @@
 ### 4.7 CLIMSYNOPTICK (`/climsynoptick`) — HealthAccess + HealthMap
 - **Purpose:** Synoptic country/district dashboard combining 9 health, livestock, and environmental metrics.
 - **Metrics:** cattle · goat · sheep · population · mammal richness · malaria · health facilities · tick records · pathogen records.
-- **Data:** `health/livestock-choropleth.geojson` (6,501 districts) + `livestock-countries.geojson` (50 countries) + `facilities.geojson` (96k points).
+- **Data:** `health/livestock-choropleth.geojson` (6,501 districts) + `livestock-countries.geojson` (50 countries) + `facilities.geojson` (100k points, sub-Saharan census + HOT/OSM North Africa).
 - **Map:** choropleth with natural-break (quantile) color ramp, **missing data shown grey (never 0)**, hover popup listing all 9 metrics, click to pin, country focus fly-to, facet coloring (e.g. per facility class or tick species).
 - **Controls:** 5 metric selector cards, layer/species/country/facility dropdowns, country-focus bar, **district profile panel** (all metrics + focus/unpin), **data-coverage audit** (per-metric coverage% + missing countries), sortable "Highest countries" table, 5 facility-class cards.
 - **Footer:** full source attribution (FAO, UNFPA, IUCN/MAP, facility census, GBIF, atlas pathogens).
@@ -205,6 +205,7 @@ The frontend **never depends on these in production** — every endpoint has a s
 | IUCN Mammals_AoH 2021 TIFF | Species richness raster | mammal richness |
 | Malaria Atlas Project CSV | Admin-1 incidence | malaria rate (2024) |
 | Sub-Saharan health facilities SHP | Point data (~98k) | facilities layer |
+| HOT/OSM North-Africa health facilities SHP (Algeria, Libya, Morocco, Tunisia) | Polygon footprints → centroids (3,738) | facilities layer |
 | Rc model CSV | Model output | Tick Cohort page |
 | Natural Earth 1:50m | Land mask | on-land point filter |
 
@@ -237,7 +238,7 @@ The frontend **never depends on these in production** — every endpoint has a s
 - Epidemiological records: **12,212** (11,348 source records, replicate-normalized to 80 clean disease names so each disease detail page returns data)
 - Diseases/pathogens: **80** · Tick species: **236** · Hosts: **354** · Countries: **50** admin units (6,501 districts)
 - GenBank: **145 species**, ~10,414 records
-- Health facilities: **96,395** mapped (of 98,745)
+- Health facilities: **100,133** mapped (98,745 sub-Saharan census + 3,738 HOT/OSM North-Africa; 2,350 dropped for no/bad coordinates), merged into a single `facilities.geojson`
 - Febrile map: 10,701 disease points → 10,315 mapped to ADM1 across 50 countries (countries with zero mapped points — Niger, Chad, Côte d'Ivoire, Eritrea, Equatorial Guinea, Sierra Leone, São Tomé — render in the zero shade with their partition boundaries via the all-countries iris in `build-febrile-choropleth.cjs`, so the map stays seamless and honest)
 
 ---

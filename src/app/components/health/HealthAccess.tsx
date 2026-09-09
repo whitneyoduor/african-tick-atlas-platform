@@ -519,11 +519,12 @@ export function HealthAccess() {
           </div>
           <div className="mt-4 text-[11px] leading-relaxed" style={{ color: atlas.textMuted, borderTop: `1px solid ${atlas.grid}`, paddingTop: 12 }}>
             <strong style={{ color: atlas.textSub }}>Known data gaps, checked:</strong>{" "}
-            Libya renders at ADM1 (22 shabiyas) because GADM has no ADM2 layer for it; it has tick and pathogen records but no
-            population, malaria or facility source data. The malaria admin-1 join leaves Madagascar, Malawi and Uganda with no
+            Libya renders at ADM1 (22 shabiyas) because GADM has no ADM2 layer for it; it has tick, pathogen and facility data but no
+            population or malaria source data. The malaria admin-1 join leaves Madagascar, Malawi and Uganda with no
             rate (district-level rates are not reported for those admin models); minor joins still miss parts of Burundi, Benin,
-            Algeria, Ethiopia, Mali, Mozambique and Sudan. Population and facility layers cover only the countries in their
-            source censuses — North African countries therefore show grey there by design.
+            Algeria, Ethiopia, Mali, Mozambique and Sudan. The population layer covers only the countries in its source censuses —
+            grey there is by design. Facilities cover the sub-Saharan census countries plus Algeria, Libya, Morocco and Tunisia
+            (HOT/OSM health-facility data).
           </div>
         </Panel>
 
