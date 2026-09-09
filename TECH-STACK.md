@@ -214,8 +214,9 @@ The frontend **never depends on these in production** — every endpoint has a s
 |---|---|
 | `server/src/import.ts` | `occurrences.json`, `occurrences-meta.json`, `epidemiological.json`, `epidemiological-meta.json` |
 | `scripts/build-map-data.cjs` | `map-points.json` (compact encoding), `tick_occurrences.geojson` |
-| `scripts/fetch_gbif_africa.py` | live GBIF Occurrence API enrichment (dedupes by GBIF key; resume via `.gbif-cache/fetched.json`) |
-| `scripts/fetch_inaturalist_africa.py` | iNaturalist REST observations enrichment (Africa bbox, per-species spatial dedupe ~0.05°) |
+| `scripts/fetch_gbif_africa.py` | live GBIF Occurrence API enrichment, five key species (dedupes by GBIF key; resume via `.gbif-cache/fetched.json`) |
+| `scripts/fetch_inaturalist_africa.py` | iNaturalist REST observations enrichment, five key species (Africa bbox, per-species spatial dedupe ~0.05°) |
+| `scripts/fetch_africa_ticks.py` | full GBIF order-Ixodida sweep (all 54 African countries, every species) + iNaturalist harvest for 32 major African tick taxa; dedupe by GBIF key + per-species spatial bucket |
 | `server/src/scripts/export-genbank-static.ts` | `genbank/{slug}.json`, `genbank/{slug}_stats.json`, `genbank/_index.json` |
 | `server/src/scripts/export-disease-coords.ts` | `genbank/disease-coordinates.json` |
 | `server/src/scripts/export-rc-data.ts` | `rc-data/index.json`, `rc-data/countries/*.json` |
@@ -233,8 +234,8 @@ The frontend **never depends on these in production** — every endpoint has a s
 **Important:** several scripts augment the livestock GeoJSONs **in place** and must run in dependency order: `build-livestock-choropleth.py` → `build-population-geojson.py` → `build-health-metrics.py` → `build-admin-counts.py`.
 
 ### Current data volumes
-- Occurrence records: **166,389** globally (year range 1839–2026); **9,656** are African-country-verified points on the map (Europe/Middle-East records in the source GBIF download are intentionally excluded)
-  - Enriched on top of the source download with `scripts/fetch_gbif_africa.py` (+2 live GBIF records) and `scripts/fetch_inaturalist_africa.py` (+288 iNaturalist observations), after confirming via the live GBIF API that the source download already contains essentially every coordinate-bearing African GBIF record for the five key species. A handful of African countries still have no georeferenced records in any public repository (e.g. Niger, Chad, Western Sahara for R. sanguineus); those are shown from literature/presence data instead of fabricated coordinates.
+- Occurrence records: **167,109** globally (year range 1839–2026); **10,354** are African-country-verified points on the map (Europe/Middle-East records in the source GBIF download are intentionally excluded)
+  - Enriched on top of the source download with `scripts/fetch_gbif_africa.py` (+2 live GBIF records), `scripts/fetch_inaturalist_africa.py` (+288 iNaturalist observations) and `scripts/fetch_africa_ticks.py` (a full GBIF order-Ixodida sweep of all 54 African countries plus an iNaturalist harvest of 32 major tick taxa → **+720 real records**, mostly Amblyomma hebraeum +120, North-African Ixodes/Haemaphysalis/Dermacentor records, Hyalomma truncatum +23, Amblyomma marmoreum +18, A. variegatum +14, H. dromedarii +10, R. evertsi +9). A back-to-back full sweep proves the five key species are exhausted: `R. sanguineus` (524 mapped points), `R. appendiculatus`, `R. microplus`, `H. marginatum`, `H. rufipes` already hold every coordinate-bearing African record GBIF and iNaturalist publish for them, so no new points were fabricated or duplicated. A handful of African countries still have no georeferenced records in any public repository (e.g. Niger, Chad, Western Sahara for R. sanguineus); those are shown from literature/presence data instead of fabricated coordinates.
 - Epidemiological records: **12,212** (11,348 source records, replicate-normalized to 80 clean disease names so each disease detail page returns data)
 - Diseases/pathogens: **80** · Tick species: **236** · Hosts: **354** · Countries: **50** admin units (6,501 districts)
 - GenBank: **145 species**, ~10,414 records
