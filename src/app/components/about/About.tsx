@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchEpidemiologicalMeta, fetchOccurrenceMeta, isAfricanCountry, type EpidemiologicalMeta, type OccurrenceMeta } from "../../lib/api";
 
-const REPO_URL = "https://github.com/whitneyoduor/african-tick-atlas-platform";
-
 export function About() {
   const [occMeta, setOccMeta] = useState<OccurrenceMeta | null>(null);
   const [epiMeta, setEpiMeta] = useState<EpidemiologicalMeta | null>(null);
@@ -62,18 +60,6 @@ export function About() {
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>License:</span>
             <code className="text-xs px-2 py-0.5 rounded" style={{ background: "var(--page-bg)", color: "var(--text-primary)" }}>CC-BY 4.0</code>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Source code:</span>
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs font-medium hover:underline"
-              style={{ color: "var(--accent-teal)" }}
-            >
-              github.com/whitneyoduor/african-tick-atlas-platform
-            </a>
-          </div>
         </div>
       </div>
 
@@ -117,10 +103,6 @@ export function About() {
         <h3 className="text-sm font-semibold mb-2">Contact & Support</h3>
         <p className="text-sm" style={{ opacity: 0.85 }}>
           For questions, data contributions, or collaboration inquiries, please contact the ICIPE platform team.
-          Bug reports and feature requests can be submitted through our{" "}
-          <a href={REPO_URL} target="_blank" rel="noreferrer" className="underline" style={{ color: "#D1FAE5" }}>
-            GitHub repository
-          </a>.
         </p>
       </div>
     </div>

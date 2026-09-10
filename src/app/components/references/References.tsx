@@ -37,6 +37,13 @@ const GBIF = {
   doi: "10.15468/dl.jve6v3",
 };
 
+const HUMDATA = {
+  title: "HUMdata Population Data",
+  citation:
+    "HDX. Africa Population Data — Humanitarian Data Exchange (OCHA). Population layer used for the population density context on the map. Available at: https://data.humdata.org/",
+  url: "https://data.humdata.org/",
+};
+
 export function References() {
   const [sources, setSources] = useState<SourceEntry[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -109,6 +116,28 @@ export function References() {
         <p className="text-sm mt-1" style={{ color: atlas.textSub }}>
           Source literature underlying the African Tick Atlas. References are compiled from peer-reviewed
           publications curated within the epidemiological data set ({total.toLocaleString()} records).
+        </p>
+      </div>
+
+      <div className="rounded-lg border p-5" style={{ borderColor: atlas.border, background: "var(--card-bg)" }}>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: atlas.teal }}>Dataset source</span>
+        </div>
+        <p className="text-sm text-center py-1 font-mono" style={{ color: atlas.text }}>
+          {HUMDATA.title} &middot; {HUMDATA.citation}
+        </p>
+        <p className="text-xs" style={{ color: atlas.textSub }}>
+          Source:{" "}
+          <a
+            href={HUMDATA.url}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono hover:underline"
+            style={{ color: atlas.teal }}
+          >
+            {HUMDATA.url}
+          </a>{" "}
+          &middot; Population data underpinning the population density context on the atlas maps.
         </p>
       </div>
 
