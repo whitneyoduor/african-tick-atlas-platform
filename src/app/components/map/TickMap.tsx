@@ -171,7 +171,7 @@ function applyStyle(m: maplibregl.Map, layer: Layer, filtered: boolean) {
         m.setPaintProperty(p, "circle-stroke-width", 1.5);
         m.setPaintProperty(p, "circle-opacity", 0.85);
       } else {
-        m.setPaintProperty(p, "circle-radius", ["interpolate", ["linear"], ["zoom"], 2, 1.2, 4.5, 2, 6, 4]);
+        m.setPaintProperty(p, "circle-radius", ["interpolate", ["linear"], ["zoom"], 2, 1.6, 4.5, 2.6, 6, 4.5]);
         m.setPaintProperty(p, "circle-stroke-width", ["interpolate", ["linear"], ["zoom"], 2, 0, 5, 0, 6, 1.5]);
         m.setPaintProperty(p, "circle-opacity", ["interpolate", ["linear"], ["zoom"], 2, 0.3, 4, 0.45, 5, 0.85]);
       }
