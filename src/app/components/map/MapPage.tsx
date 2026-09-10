@@ -215,7 +215,7 @@ export function MapPage() {
 
       {/* Center - Map */}
       <div className="flex-1 relative">
-        <TickMap activeLayer={activeLayer} points={filteredPoints} registerCapture={setCaptureMap} />
+        <TickMap activeLayer={activeLayer} points={filteredPoints} filtered={activeFilterCount > 0} registerCapture={setCaptureMap} />
 
         <div className="absolute top-3 right-3 z-10">
           <FigureExportButton captureFn={captureMap} filename="climsynoptick-map.png" />

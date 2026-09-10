@@ -10,18 +10,21 @@ type Layer = "occurrence" | "richness" | "hosts" | "disease" | "prevalence" | "d
 interface TickMapProps {
   activeLayer: Layer;
   points: MapPoint[];
+  filtered?: boolean;
   registerCapture?: (fn: () => HTMLCanvasElement) => void;
 }
 
-export function TickMap({ activeLayer, points, registerCapture }: TickMapProps) {
+export function TickMap({ activeLayer, points, filtered = false, registerCapture }: TickMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const mapObj = useRef<maplibregl.Map | null>(null);
   const ready = useRef(false);
   const pointsRef = useRef<MapPoint[]>(points);
   const layerRef = useRef<Layer>(activeLayer);
+  const filteredRef = useRef(filtered);
 
   pointsRef.current = points;
   layerRef.current = activeLayer;
+  filteredRef.current = filtered;
 
   useEffect(() => {
     if (!registerCapture) return;
@@ -103,7 +106,7 @@ export function TickMap({ activeLayer, points, registerCapture }: TickMapProps) 
       m.on("mouseenter", "points", () => { m.getCanvas().style.cursor = "pointer"; });
       m.on("mouseleave", "points", () => { m.getCanvas().style.cursor = ""; });
 
-      applyStyle(m, layerRef.current);
+      applyStyle(m, layerRef.current, filteredRef.current);
     });
 
     mapObj.current = m;
@@ -116,9 +119,9 @@ export function TickMap({ activeLayer, points, registerCapture }: TickMapProps) 
     const src = m.getSource("ticks") as maplibregl.GeoJSONSource | undefined;
     if (src) {
       src.setData(geojsonData);
-      applyStyle(m, activeLayer);
     }
-  }, [geojsonData, activeLayer]);
+    applyStyle(m, activeLayer, filtered);
+  }, [geojsonData, activeLayer, filtered]);
 
   return <div ref={container} className="w-full h-full" />;
 }
@@ -145,7 +148,7 @@ function buildGeoJSON(points: MapPoint[]): GeoJSON.FeatureCollection {
   };
 }
 
-function applyStyle(m: maplibregl.Map, layer: Layer) {
+function applyStyle(m: maplibregl.Map, layer: Layer, filtered: boolean) {
   const isDensity = layer === "density";
   const isDisease = layer === "disease";
   m.setLayoutProperty("points", "visibility", isDensity ? "none" : "visible");
@@ -161,11 +164,17 @@ function applyStyle(m: maplibregl.Map, layer: Layer) {
 
   switch (layer) {
     case "occurrence":
-      m.setPaintProperty(p, "circle-radius", 4);
       m.setPaintProperty(p, "circle-color", "#134E4A");
-      m.setPaintProperty(p, "circle-stroke-width", 1.5);
       m.setPaintProperty(p, "circle-stroke-color", "#fff");
-      m.setPaintProperty(p, "circle-opacity", 0.85);
+      if (filtered) {
+        m.setPaintProperty(p, "circle-radius", 4);
+        m.setPaintProperty(p, "circle-stroke-width", 1.5);
+        m.setPaintProperty(p, "circle-opacity", 0.85);
+      } else {
+        m.setPaintProperty(p, "circle-radius", ["interpolate", ["linear"], ["zoom"], 2, 0.7, 4.5, 1.4, 6, 4]);
+        m.setPaintProperty(p, "circle-stroke-width", ["interpolate", ["linear"], ["zoom"], 2, 0.3, 6, 1.5]);
+        m.setPaintProperty(p, "circle-opacity", ["interpolate", ["linear"], ["zoom"], 2, 0.08, 4, 0.25, 5, 0.85]);
+      }
       break;
 
     case "richness":
