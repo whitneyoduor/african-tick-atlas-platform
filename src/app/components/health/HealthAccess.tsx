@@ -35,9 +35,9 @@ function fmtDV(m: (typeof METRICS)[number], v: number): string {
   return `${v >= 1 ? v.toLocaleString(undefined, { maximumFractionDigits: 1 }) : v.toFixed(2)} ${m.unit}`;
 }
 
-/** Property key for a facility class facet, e.g. "Health centre" -> facility_Health_centre */
+/** Property key for a facility class facet, e.g. "Health centre" -> facility_Health_centre, "Post / primary" -> facility_Post_primary */
 function facKey(t: string): string {
-  return "facility_" + t.replace(/[ /\-]/g, "_");
+  return "facility_" + t.replace(/[,()]/g, "").replace(/[\s/]+/g, "_");
 }
 
 /** Decorate a slug into a display species name (rhipicephalus_annulatus -> Rhipicephalus annulatus). */
