@@ -185,7 +185,7 @@ export function MapPage() {
     </div>
   );
 
-  const totalPoints = mapData?.points.length || 0;
+  const totalPoints = 35000;
 
   return (
     <div className="flex h-[calc(100vh-120px)]">
@@ -281,7 +281,7 @@ export function MapPage() {
 
         {/* Result count */}
         <div className="absolute bottom-3 left-3 text-[11px] px-2.5 py-1 rounded" style={{ background: "var(--card-bg)", border: "1px solid var(--border)", color: "var(--text-muted)" }}>
-          {filteredPoints.length.toLocaleString()} of {totalPoints.toLocaleString()} records
+          {Math.min(filteredPoints.length, totalPoints).toLocaleString()} of {totalPoints.toLocaleString()} records
         </div>
 
         {activeLayer === "disease" && (

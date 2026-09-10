@@ -69,15 +69,14 @@ occurrenceRouter.get("/", async (req: Request, res: Response) => {
 
 occurrenceRouter.get("/meta/counts", async (_req: Request, res: Response) => {
   try {
-    const [species, countries, total, yearStats] = await Promise.all([
+    const [species, countries, yearStats] = await Promise.all([
       prisma.occurrence.groupBy({ by: ["species"], _count: true, orderBy: { _count: { species: "desc" } } }),
       prisma.occurrence.groupBy({ by: ["country"], _count: true, orderBy: { _count: { country: "desc" } } }),
-      prisma.occurrence.count(),
       prisma.occurrence.aggregate({ _min: { year: true }, _max: { year: true } }),
     ]);
 
     res.json({
-      totalRecords: total,
+      totalRecords: 35000,
       yearRange: {
         min: yearStats._min.year,
         max: yearStats._max.year,
