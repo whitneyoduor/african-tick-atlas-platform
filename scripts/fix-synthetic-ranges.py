@@ -40,9 +40,8 @@ MADAGASCAR_ONLY = {
 RANGES = {
     "Hyalomma marginatum": {
         "Morocco", "Algeria", "Tunisia", "Libya", "Egypt", "Western Sahara",
-        "Mauritania", "Senegal", "Gambia", "Guinea-Bissau", "Mali", "Burkina Faso",
-        "Niger", "Chad", "Sudan", "Nigeria", "Ghana", "Togo", "Benin", "Ivory Coast",
-        "Cameroon", "Central African Republic", "Cabo Verde",
+        "Mauritania", "Senegal", "Gambia", "Mali", "Burkina Faso",
+        "Niger", "Chad", "Sudan", "Nigeria",
     },
     "Hyalomma rufipes": {
         "Mauritania", "Western Sahara", "Senegal", "Gambia", "Guinea-Bissau", "Mali",
