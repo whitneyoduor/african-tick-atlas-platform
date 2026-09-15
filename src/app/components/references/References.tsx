@@ -38,10 +38,24 @@ const GBIF = {
 };
 
 const HUMDATA = {
-  title: "HUMdata Population Data",
+  title: "HUMdata Human Population Data",
   citation:
-    "HDX. Africa Population Data — Humanitarian Data Exchange (OCHA). Population layer used for the population density context on the map. Available at: https://data.humdata.org/",
+    "HDX. Africa Population Data — Humanitarian Data Exchange (OCHA). UNFPA/FAO Common Operational Datasets admin population estimates used for the population density layer on the atlas maps. Available at: https://data.humdata.org/",
   url: "https://data.humdata.org/",
+};
+
+const FACILITIES = {
+  title: "HDX Health Facilities in Sub-Saharan Africa",
+  citation:
+    "HDX. Health Facilities in Sub-Saharan Africa — Humanitarian Data Exchange (OCHA). Sub-Saharan health-facility census (2015) with HOT/OSM Maghreb facilities, used for the mapped health-facility layer on the atlas maps. Available at: https://data.humdata.org/dataset/health-facilities-in-sub-saharan-africa",
+  url: "https://data.humdata.org/dataset/health-facilities-in-sub-saharan-africa",
+};
+
+const MALARIA = {
+  title: "Malaria Atlas Project, Malaria Incidence",
+  citation:
+    "Malaria Atlas Project (MAP). Admin-1 malaria incidence rate (cases per thousand, 2024), used for the malaria layer on the atlas maps. Available at: https://malariaatlas.org/",
+  url: "https://malariaatlas.org/",
 };
 
 export function References() {
@@ -121,7 +135,9 @@ export function References() {
 
       <div className="rounded-lg border p-5" style={{ borderColor: atlas.border, background: "var(--card-bg)" }}>
         <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: atlas.teal }}>Dataset source</span>
+          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: atlas.teal }}>
+            Human population data source
+          </span>
         </div>
         <p className="text-sm text-center py-1 font-mono" style={{ color: atlas.text }}>
           {HUMDATA.title} &middot; {HUMDATA.citation}
@@ -137,13 +153,63 @@ export function References() {
           >
             {HUMDATA.url}
           </a>{" "}
-          &middot; Population data underpinning the population density context on the atlas maps.
+          &middot; Human population density data underpinning the population density context on the atlas maps.
         </p>
       </div>
 
       <div className="rounded-lg border p-5" style={{ borderColor: atlas.border, background: "var(--card-bg)" }}>
         <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: atlas.teal }}>Dataset source</span>
+          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: atlas.teal }}>
+            Health facility data source
+          </span>
+        </div>
+        <p className="text-sm text-center py-1 font-mono" style={{ color: atlas.text }}>
+          {FACILITIES.title} &middot; {FACILITIES.citation}
+        </p>
+        <p className="text-xs" style={{ color: atlas.textSub }}>
+          Source:{" "}
+          <a
+            href={FACILITIES.url}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono hover:underline"
+            style={{ color: atlas.teal }}
+          >
+            {FACILITIES.url}
+          </a>{" "}
+          &middot; Mapped health-facility layer underpinning the health access and facility distributions on the atlas maps.
+        </p>
+      </div>
+
+      <div className="rounded-lg border p-5" style={{ borderColor: atlas.border, background: "var(--card-bg)" }}>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: atlas.teal }}>
+            Malaria data source
+          </span>
+        </div>
+        <p className="text-sm text-center py-1 font-mono" style={{ color: atlas.text }}>
+          {MALARIA.title} &middot; {MALARIA.citation}
+        </p>
+        <p className="text-xs" style={{ color: atlas.textSub }}>
+          Source:{" "}
+          <a
+            href={MALARIA.url}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono hover:underline"
+            style={{ color: atlas.teal }}
+          >
+            {MALARIA.url}
+          </a>{" "}
+          &middot; Malaria incidence rates underpinning the malaria layer on the health maps.
+        </p>
+      </div>
+
+      <div className="rounded-lg border p-5" style={{ borderColor: atlas.border, background: "var(--card-bg)" }}>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: atlas.teal }}>
+            Tick occurrence data source
+          </span>
         </div>
         <p className="text-sm text-center py-1 font-mono" style={{ color: atlas.text }}>
           {GBIF.title} &middot; {GBIF.citation}

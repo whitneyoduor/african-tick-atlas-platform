@@ -43,7 +43,7 @@ RANGES = {
         "Mauritania", "Senegal", "Gambia", "Mali", "Burkina Faso",
         "Niger", "Chad", "Sudan", "Nigeria",
     },
-    "Hyalomma rufipes": {
+    "Hyalomma rufipes": set(NORTH) | {
         "Mauritania", "Western Sahara", "Senegal", "Gambia", "Guinea-Bissau", "Mali",
         "Burkina Faso", "Niger", "Chad", "Sudan", "South Sudan", "Ethiopia", "Somalia",
         "Djibouti", "Kenya", "Uganda", "United Republic of Tanzania", "Rwanda", "Burundi",
