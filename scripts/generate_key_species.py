@@ -114,14 +114,14 @@ SPECIES_DISTRIBUTIONS = {
         "Ghana": 20, "Togo": 10, "Cabo Verde": 10,
     },
     "Hyalomma rufipes": {
-        # Arid zone tick - Sahel, Sahara margins, East Africa arid areas
-        "Morocco": 100, "Algeria": 120, "Tunisia": 80, "Libya": 100,
-        "Egypt": 120, "Sudan": 150, "South Sudan": 40, "Ethiopia": 100,
-        "Somalia": 100, "Mali": 80, "Niger": 80, "Chad": 90,
-        "Mauritania": 60, "Senegal": 40, "Kenya": 60, "Tanzania, United Republic of": 40,
-        "Namibia": 30, "Botswana": 25, "South Africa": 40, "Gambia": 15,
-        "Nigeria": 30, "Guinea": 15, "Guinea-Bissau": 10, "Benin": 10,
-        "Burkina Faso": 15, "Ghana": 10, "Cabo Verde": 5,
+        # Arid zone tick - dense in its core East/Southern African and
+        # Sahelian range, with only smaller populations on the Mediterranean.
+        "Kenya": 260, "Ethiopia": 250, "Somalia": 230,
+        "South Africa": 220, "Botswana": 210, "Zimbabwe": 190, "Namibia": 170,
+        "Sudan": 200, "Chad": 150, "Niger": 130, "Mali": 120,
+        "Burkina Faso": 100, "Benin": 80, "Nigeria": 90,
+        "Senegal": 60, "Mauritania": 50, "Gambia": 30, "Djibouti": 25,
+        "Morocco": 35, "Algeria": 45, "Tunisia": 30, "Libya": 35, "Egypt": 45,
     },
 }
 
@@ -180,7 +180,7 @@ targets = {
     "Rhipicephalus appendiculatus": 2500,
     "Rhipicephalus microplus": 1500,
     "Hyalomma marginatum": 2000,
-    "Hyalomma rufipes": 1000,
+    "Hyalomma rufipes": 2500,
 }
 
 total_added = 0

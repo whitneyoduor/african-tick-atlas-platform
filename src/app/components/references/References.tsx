@@ -58,6 +58,20 @@ const MALARIA = {
   url: "https://malariaatlas.org/",
 };
 
+const LIVESTOCK = {
+  title: "FAO Gridded Livestock of the World",
+  citation:
+    "Gilbert, M., Nicolas, G., Cinardi, G., Van Boeckel, T.P., Vanwambeke, S.O., Wint, G.R.W., Robinson, T.P., 2018. Global distribution data for cattle, buffaloes, horses, sheep, goats, pigs, chickens and ducks in 2010. Scientific Data 5, 180227.",
+  doi: "10.1038/sdata.2018.227",
+};
+
+const MAMMALS = {
+  title: "IUCN Red List Mammal Species Richness (Area of Habitat Maps)",
+  citation:
+    "International Union for Conservation of Nature, 2021. The IUCN Red List of Threatened Species: Mammals — Species Richness from Area of Habitat Maps. See Lumbierres, M., Dahal, P.R., Soria, C.D., Di Marco, M., Butchart, S.H.M., Donald, P.F., Rondinini, C., 2022. Area of Habitat maps for the world's terrestrial birds and mammals. Scientific Data 9, 749.",
+  doi: "10.1038/s41597-022-01838-w",
+};
+
 export function References() {
   const [sources, setSources] = useState<SourceEntry[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -130,6 +144,54 @@ export function References() {
         <p className="text-sm mt-1" style={{ color: atlas.textSub }}>
           Source literature underlying the African Tick Atlas. References are compiled from peer-reviewed
           publications curated within the epidemiological data set ({total.toLocaleString()} records).
+        </p>
+      </div>
+
+      <div className="rounded-lg border p-5" style={{ borderColor: atlas.border, background: "var(--card-bg)" }}>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: atlas.teal }}>
+            Livestock data source
+          </span>
+        </div>
+        <p className="text-sm text-center py-1 font-mono" style={{ color: atlas.text }}>
+          {LIVESTOCK.title} &middot; {LIVESTOCK.citation}
+        </p>
+        <p className="text-xs" style={{ color: atlas.textSub }}>
+          Data DOI:{" "}
+          <a
+            href={`https://doi.org/${LIVESTOCK.doi}`}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono hover:underline"
+            style={{ color: atlas.teal }}
+          >
+            {LIVESTOCK.doi}
+          </a>{" "}
+          &middot; Gridded cattle, sheep and goat density surfaces (heads per ~8 km cell) underpinning the livestock layers on the health maps.
+        </p>
+      </div>
+
+      <div className="rounded-lg border p-5" style={{ borderColor: atlas.border, background: "var(--card-bg)" }}>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: atlas.teal }}>
+            Mammal data source
+          </span>
+        </div>
+        <p className="text-sm text-center py-1 font-mono" style={{ color: atlas.text }}>
+          {MAMMALS.title} &middot; {MAMMALS.citation}
+        </p>
+        <p className="text-xs" style={{ color: atlas.textSub }}>
+          Data DOI:{" "}
+          <a
+            href={`https://doi.org/${MAMMALS.doi}`}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono hover:underline"
+            style={{ color: atlas.teal }}
+          >
+            {MAMMALS.doi}
+          </a>{" "}
+          &middot; Wild-mammal species richness (5 km Area-of-Habitat mosaic) standing in for potential wild tick-host availability on the health maps.
         </p>
       </div>
 
