@@ -110,14 +110,14 @@ SPECIES_DISTRIBUTIONS = {
         "Libya": 220, "Egypt": 320,
     },
     "Hyalomma rufipes": {
-        # Arid zone tick - dense in its core East/Southern African and
-        # Sahelian range, with only smaller populations on the Mediterranean.
-        "Kenya": 260, "Ethiopia": 250, "Somalia": 230,
-        "South Africa": 220, "Botswana": 210, "Zimbabwe": 190, "Namibia": 170,
-        "Sudan": 200, "Chad": 150, "Niger": 130, "Mali": 120,
-        "Burkina Faso": 100, "Benin": 80, "Nigeria": 90,
-        "Senegal": 60, "Mauritania": 50, "Gambia": 30, "Djibouti": 25,
-        "Morocco": 35, "Algeria": 45, "Tunisia": 30, "Libya": 35, "Egypt": 45,
+        # Arid zone tick - dense in Southern Africa, with a narrow Sahel
+        # savanna band, smaller North African margin populations and only a
+        # sparse Horn-of-Africa presence.
+        "South Africa": 400, "Botswana": 360, "Zimbabwe": 340, "Namibia": 320, "Eswatini": 70,
+        "Sudan": 180, "Chad": 140, "Niger": 120, "Mali": 110, "Burkina Faso": 90,
+        "Nigeria": 80, "Benin": 70, "Senegal": 60, "Mauritania": 50, "Gambia": 25,
+        "Ethiopia": 60, "Kenya": 50, "Somalia": 40, "Djibouti": 12,
+        "Morocco": 45, "Algeria": 50, "Tunisia": 35, "Libya": 40, "Egypt": 50,
     },
 }
 
