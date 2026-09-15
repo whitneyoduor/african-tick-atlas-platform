@@ -105,13 +105,9 @@ SPECIES_DISTRIBUTIONS = {
         "Eswatini": 20, "Lesotho": 15, "Burundi": 30, "Rwanda": 25,
     },
     "Hyalomma marginatum": {
-        # Brown ear tick - North Africa, Sahel, Horn of Africa
-        "Morocco": 250, "Algeria": 200, "Tunisia": 150, "Libya": 120,
-        "Egypt": 200, "Sudan": 250, "South Sudan": 60, "Ethiopia": 200,
-        "Somalia": 120, "Mali": 80, "Niger": 80, "Chad": 100,
-        "Mauritania": 60, "Senegal": 50, "Gambia": 20, "Nigeria": 40,
-        "Guinea": 20, "Guinea-Bissau": 15, "Benin": 15, "Burkina Faso": 25,
-        "Ghana": 20, "Togo": 10, "Cabo Verde": 10,
+        # Brown ear tick - North Africa (bordering the Mediterranean)
+        "Morocco": 380, "Algeria": 420, "Tunisia": 260,
+        "Libya": 220, "Egypt": 320,
     },
     "Hyalomma rufipes": {
         # Arid zone tick - dense in its core East/Southern African and
